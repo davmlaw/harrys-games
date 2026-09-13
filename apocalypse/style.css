@@ -1,0 +1,73 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Georgia, serif;
+  background: #2b2018;
+  color: #eee;
+}
+#app { max-width: 1180px; margin: 0 auto; padding: 12px; }
+header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+header h1 { margin: 0; color: #d9b96b; letter-spacing: 2px; }
+#status { font-style: italic; color: #c0a070; }
+main { display: flex; gap: 12px; align-items: flex-start; }
+canvas {
+  background: #4d6b3a;
+  border: 4px solid #5a3a1a;
+  border-radius: 4px;
+  display: block;
+  cursor: crosshair;
+}
+#panel {
+  width: 260px;
+  background: #1f160f;
+  border: 2px solid #5a3a1a;
+  border-radius: 4px;
+  padding: 12px;
+  min-height: 600px;
+}
+#panel h2 {
+  margin-top: 0;
+  color: #d9b96b;
+  border-bottom: 1px solid #5a3a1a;
+  padding-bottom: 4px;
+}
+.hint { color: #b29870; font-size: 13px; }
+button {
+  background: #6b4423;
+  color: #f0e0c0;
+  border: 1px solid #d9b96b;
+  border-radius: 3px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  margin: 4px 4px 4px 0;
+}
+button:hover { background: #8b5a2d; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.active { background: #d9b96b; color: #2b2018; }
+.setting { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; }
+.setting input {
+  width: 70px;
+  background: #2b2018;
+  color: #f0e0c0;
+  border: 1px solid #d9b96b;
+  padding: 4px 6px;
+  font-family: inherit;
+}
+footer {
+  margin-top: 8px;
+  color: #b29870;
+  font-size: 13px;
+  display: flex;
+  gap: 16px;
+}
+.legend { display: inline-flex; align-items: center; gap: 6px; }
+.speed-control { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.speed-control button { padding: 4px 10px; font-size: 16px; min-width: 32px; }
+.speed-control #speedDisplay { min-width: 36px; text-align: center; color: #d9b96b; }
+.swatch { width: 14px; height: 14px; display: inline-block; border-radius: 2px; }
+.swatch.tower { background: #888; border: 1px solid #555; }
+.swatch.cottage { background: #b54; }
+.swatch.zombie { background: #6a3; border: 1px solid #000; border-radius: 50%; }
+.swatch.sign { background: #ffd24a; border: 1px dashed #000; }

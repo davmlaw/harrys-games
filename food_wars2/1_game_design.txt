@@ -1,0 +1,30 @@
+ I want to make a game (stand alone web page) in Javascript - can use libraries etc - where you run a shop, ie         
+McDonalds or some other burger joint, or a sushi shop, and you run it and can upgrade it. You compete selling against   
+other fast food shops. I want you to ask a bunch of clarifying questions, then build the 1st version                    
+
+  ⎿  · What's the main food shop theme you want to play as? → Mix — pick any
+     · What should the core gameplay loop feel like? → Idle / clicker
+     · How should competition with rival shops work? → Shared customer pool
+     · What visual style fits what you're imagining? → Clean / modern UI
+
+  - Shop: Pick from Burger, Sushi, Pizza, or Taco at start
+  - Loop: Idle/clicker — customers auto-arrive, click to serve + buy staff
+  - Competition: Shared customer pool, AI rivals that upgrade themselves
+  - Style: Clean bright UI with per-shop accent colors
+
+The game should be balanced and fun. It should have nice bright colours, that looks good to a 8-10 year old kids. Have procedurally generated graphics (which can be simple spans/divs etc to make the images, or canvas or SVG whatever you think looks best)
+
+If you don't do much, the shop should basically run at enough to slowly accumulate money to be able to upgrade stuff. Then upgrades should help you make even more money
+
+There should be bank robbers (dressed in stereotypically black/white striped clothes holding guns), and they come in and rob the teller - You can hire a security guard and it will reduce the chance of this and chase it away.
+
+You can upgrade the look of the shop, if you add a playground like in McDonalds has, more kids will come and eat there.
+
+You can add general decorations, change signs etc. You should be able to have a couple to select from. Ie 3 different playground variations, 10 signs etc. Once you upgrade, the appearance of your shop changes. The more you spend on making the shop look nice, the more customers come.
+
+As the numbers of customers grows, you end up maxing out your workers. You can then hire new worker (later, maybe robot waiters or robot burger flippers) then you can serve more customers and make more money
+
+Your fridges can break down, and you can buy cheap meat. But no fridge, or bad meat chance causes people to get sick. If there is too much barf, people leave and never buy
+We want it to be on a city street, where you can see just one side of the street in an isometric view, and a road. with say 10 shops total of which 4 are fast food joints. You can see all of the shops, and people  walk down the street and choose which shop to go into
+
+

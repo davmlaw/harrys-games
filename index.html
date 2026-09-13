@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harry's Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@600;800&display=swap">
+<style>
+:root{
+  --sky:#8fdcff;
+  --sky-deep:#4fb9f0;
+  --ink:#1d1a33;
+  --paper:#ffffff;
+  --tomato:#ff5a36;
+  --banana:#ffd43b;
+  --lime:#8be04a;
+  --grape:#7a4dff;
+  --bubblegum:#ff7ad9;
+  --display:'Bangers',Impact,sans-serif;
+  --body:'Nunito',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{
+  margin:0;color:var(--ink);font-family:var(--body);font-weight:600;
+  background:var(--sky);
+  background-image:radial-gradient(rgba(255,255,255,.55) 2.5px,transparent 3px);
+  background-size:26px 26px;
+  padding-inline:16px;padding-block:0 56px;min-height:100vh;overflow-x:hidden;
+}
+.wrap{max-width:1000px;margin:0 auto;position:relative}
+
+/* floating shapes behind everything */
+.blob{position:absolute;border-radius:50%;z-index:0;pointer-events:none}
+.blob.a{width:260px;height:260px;background:var(--banana);top:40px;left:-120px;opacity:.85}
+.blob.b{width:180px;height:180px;background:var(--bubblegum);top:220px;right:-70px;opacity:.8}
+.blob.c{width:120px;height:120px;background:var(--lime);bottom:120px;left:12%;opacity:.8}
+
+header{position:relative;z-index:1;text-align:center;padding-top:44px}
+h1{
+  font-family:var(--display);font-size:clamp(3.4rem,12vw,7.5rem);line-height:.95;margin:0;
+  color:var(--banana);letter-spacing:.02em;text-wrap:balance;
+  -webkit-text-stroke:3px var(--ink);
+  text-shadow:6px 6px 0 var(--ink),10px 10px 0 var(--tomato);
+  transform:rotate(-3deg);display:inline-block;
+}
+.byline{
+  display:inline-block;margin-top:22px;padding:8px 20px;background:var(--paper);border:4px solid var(--ink);border-radius:999px;
+  font-size:1.05rem;transform:rotate(1.5deg);box-shadow:4px 4px 0 var(--ink);
+}
+.byline b{color:var(--grape);font-weight:800}
+
+/* stickers */
+.sheet{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:34px;margin-top:54px;align-items:start}
+.stk{
+  display:block;text-decoration:none;color:inherit;background:var(--paper);
+  padding:12px 12px 16px;border-radius:26px;
+  border:4px solid var(--ink);box-shadow:8px 8px 0 var(--ink);
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s;
+}
+.stk:nth-child(1){transform:rotate(-2.5deg);--tag:var(--tomato)}
+.stk:nth-child(2){transform:rotate(2deg);--tag:var(--lime)}
+.stk:nth-child(3){transform:rotate(-1deg);--tag:var(--grape)}
+.stk:hover,.stk:focus-visible{transform:rotate(0) scale(1.04);box-shadow:12px 12px 0 var(--ink);outline:none}
+.shot{border-radius:16px;border:4px solid var(--ink);aspect-ratio:16/10;background:var(--ink);position:relative}
+.shot img{width:100%;height:100%;object-fit:cover;display:block;border-radius:11px}
+.tag{
+  position:absolute;top:-14px;right:-10px;background:var(--tag);color:var(--paper);
+  font-family:var(--display);font-size:1.15rem;letter-spacing:.05em;padding:6px 14px;
+  border:3px solid var(--ink);border-radius:10px;transform:rotate(6deg);box-shadow:3px 3px 0 var(--ink);
+  text-shadow:1px 1px 0 var(--ink);
+}
+.stk h2{font-family:var(--display);font-size:2.3rem;margin:16px 0 4px;letter-spacing:.03em;line-height:1;color:var(--ink)}
+.when{display:inline-block;margin:0 0 10px;font-size:.82rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:var(--banana);padding:3px 10px;border:2px solid var(--ink);border-radius:999px;transform:rotate(-1.5deg)}
+.stk p{margin:0;line-height:1.5;font-size:1rem;max-width:44ch}
+.go{
+  display:inline-block;margin-top:14px;font-family:var(--display);font-size:1.5rem;letter-spacing:.06em;
+  background:var(--tag);color:var(--paper);padding:8px 22px;border:3px solid var(--ink);border-radius:14px;
+  box-shadow:4px 4px 0 var(--ink);text-shadow:1px 1px 0 var(--ink);
+}
+.stk:hover .go{background:var(--banana);color:var(--ink);text-shadow:none}
+
+.stk.soon{background:repeating-linear-gradient(45deg,#fff 0 14px,#f2f2f8 14px 28px);border-style:dashed;box-shadow:6px 6px 0 rgba(29,26,51,.4)}
+.stk.soon .shot{display:grid;place-items:center;background:var(--paper);border-style:dashed}
+.stk.soon .shot span{font-family:var(--display);font-size:2rem;color:#9a96b8;text-align:center;line-height:1.1;letter-spacing:.05em}
+
+footer{position:relative;z-index:1;text-align:center;margin-top:60px;font-size:1rem}
+footer span{display:inline-block;background:var(--ink);color:var(--paper);padding:8px 18px;border-radius:999px;transform:rotate(-1deg)}
+@media (prefers-reduced-motion:reduce){.stk{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="blob a" aria-hidden="true"></div>
+  <div class="blob b" aria-hidden="true"></div>
+  <div class="blob c" aria-hidden="true"></div>
+
+  <header>
+    <h1>Harry's Games</h1>
+    <br>
+    <div class="byline">Made by <b>Harry Lawrence</b> · free to play, no download</div>
+  </header>
+
+  <main class="sheet">
+    <a class="stk" href="food_wars2/index.html">
+      <div class="shot">
+        <img src="assets/food_wars2.jpg" alt="A row of colourful fast-food shops on a busy street">
+        <span class="tag">Shop Tycoon</span>
+      </div>
+      <h2>Food Wars!</h2>
+      <span class="when">Started April 2026 · Harry's first game</span>
+      <p>Open a burger, sushi, pizza or taco shop on Food Street. Serve customers, add a playground, hire a guard, and beat four rival shops.</p>
+      <span class="go">PLAY!</span>
+    </a>
+
+    <a class="stk" href="apocalypse/index.html">
+      <div class="shot">
+        <img src="assets/apocalypse.jpg" alt="Zombies marching along roads toward cottages defended by archer towers">
+        <span class="tag">Tower Defence</span>
+      </div>
+      <h2>Apocalypse</h2>
+      <span class="when">Started May 2026</span>
+      <p>Zombies are marching on the village! Build archer towers to stop them, or play as the zombies and trick them down the roads with signs.</p>
+      <span class="go">PLAY!</span>
+    </a>
+
+    <div class="stk soon" aria-label="Next game coming soon">
+      <div class="shot"><span>Coming<br>Soon…</span></div>
+      <h2>Next game</h2>
+      <p>Harry is still building this one. Check back later!</p>
+    </div>
+  </main>
+
+  <footer><span>© 2026 Harry Lawrence</span></footer>
+</div>
+</body>
+</html>

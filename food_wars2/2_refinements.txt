@@ -1,0 +1,34 @@
+We need a "restart game" button, should be out of the way not easy to hit
+
+The shops should start with a bit more sky visible, because we want to be able to unlock a 2 story shop. Shops should be a bit further away from each other
+
+There should be 10 levels of upgrades, but 5+ is only available once you have 2 stories.
+
+One of the upgrades should be to get food apps / home delivery, then deliveroo style driver bikes come to your store along the road and buy stuff.
+
+Other stores get upgrades too, including mascots.
+
+You can hire someone to turn up with a van and snatch the other shops mascots
+
+graphics:
+
+* Signs should be bigger
+* flags and decorations should be bigger
+
+When others see puke, they should go "eeeew" (ideally sound effect, but can be speech bubble) and have a 50% chance of punking too
+
+There should be a pause button (visible, easy to hit, but not where restart is).
+
+Rich people: ~1% of pedestrians are wealthy. They wear a top hat and have a dollar sign on them. They spend significantly more money per visit than regular customers.
+
+Cop: A cop character walks along the street rarely (infrequently, like an occasional patrol). They have two effects:
+- They can catch and chase away bank robbers
+- If you have hired someone to steal a rival's mascot and the cop catches them in the act, you get fined $20
+
+Food reviewer: A special NPC who occasionally visits your shop. When they try your food:
+- Their review is published in an in-game "news" ticker/headline
+- Good review → more customers come (boost to customer flow)
+- Bad review → fewer customers (negative effect on customer flow)
+- If the reviewer visits while customers have been getting sick (bad meat / broken fridge), the review will be negative and the penalty is harsher
+
+

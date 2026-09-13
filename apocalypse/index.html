@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Apocalypse — Medieval Tower Defence</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Apocalypse</h1>
+    <div id="status">Choose your side</div>
+  </header>
+  <main>
+    <canvas id="board" width="900" height="600"></canvas>
+    <aside id="panel">
+      <section id="sideSelect">
+        <h2>Settings</h2>
+        <div class="setting">
+          <label for="cfgTowers">Towers</label>
+          <input id="cfgTowers" type="number" min="1" max="6" value="4">
+        </div>
+        <div class="setting">
+          <label for="cfgZombies">Zombies</label>
+          <input id="cfgZombies" type="number" min="5" max="100" value="20">
+        </div>
+        <div class="setting">
+          <label for="cfgCottagesWin">Cottages to destroy to win</label>
+          <input id="cfgCottagesWin" type="number" min="1" max="5" value="3">
+        </div>
+        <h2>Pick a side</h2>
+        <button data-side="villager">Play Villagers</button>
+        <button data-side="zombie">Play Zombies</button>
+      </section>
+      <section id="setupVillager" hidden>
+        <h2>Place archer towers</h2>
+        <p class="hint">Click highlighted spots near the roads. The zombie player has placed signs already.</p>
+        <p>Towers left: <span id="towersLeft"></span></p>
+        <button id="startBattleV">Start battle</button>
+      </section>
+      <section id="setupZombie" hidden>
+        <h2>Place direction signs</h2>
+        <p class="hint">Click a dashed arrow at a junction to add it; click again to remove. Pick more than one and zombies split randomly between them. No signs at a junction = full random. No limit on signs.</p>
+        <button id="startBattleZ">Start battle</button>
+      </section>
+      <section id="battleInfo" hidden>
+        <h2>Battle</h2>
+        <p>Zombies remaining: <span id="zRemaining"></span></p>
+        <p>Zombies killed: <span id="zKilled"></span></p>
+        <p>Cottages standing: <span id="cAlive"></span></p>
+        <p>Cottages destroyed: <span id="cDead"></span></p>
+        <p id="zombieLiveControls" hidden>
+          <span class="hint">You can still re-route mid-battle by clicking arrows.</span>
+        </p>
+        <div class="speed-control">
+          <span>Speed:</span>
+          <button id="speedDown" aria-label="Slower">−</button>
+          <span id="speedDisplay">1×</span>
+          <button id="speedUp" aria-label="Faster">+</button>
+        </div>
+      </section>
+      <section id="endInfo" hidden>
+        <h2 id="endTitle"></h2>
+        <p id="endText"></p>
+        <button id="restartBtn">Play again</button>
+      </section>
+    </aside>
+  </main>
+  <footer>
+    <span class="legend"><span class="swatch tower"></span> Tower</span>
+    <span class="legend"><span class="swatch cottage"></span> Cottage</span>
+    <span class="legend"><span class="swatch zombie"></span> Zombie</span>
+    <span class="legend"><span class="swatch sign"></span> Sign arrow</span>
+  </footer>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
