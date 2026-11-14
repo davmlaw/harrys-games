@@ -62,44 +62,56 @@ kbd {
   background: var(--moon); color: var(--ink); border-radius: 5px; box-shadow: 0 2px 0 #8a8060;
 }
 
-/* ---------- mobile mode: only on touch-first devices (body.touch), desktop is unchanged ---------- */
-#touch { display: none; position: absolute; inset: 0; pointer-events: none; touch-action: none; }
+/* ---------- mobile mode: only on phones/tablets (body.touch); desktop is unchanged ---------- */
+#touch, #mbar, #rotate { display: none; }
 body.touch.playing #touch { display: block; }
-/* touch anywhere on the left half: the joystick appears under your thumb */
-#joyZone { position: absolute; left: 0; top: 18%; bottom: 0; width: 50%; pointer-events: auto; touch-action: none; }
+#touch { position: absolute; inset: 0; pointer-events: none; touch-action: none; }
+/* touch anywhere on the left half: the joystick appears under your thumb. Very faint so you can see through it. */
+#joyZone { position: absolute; left: 0; top: 15%; bottom: 0; width: 50%; pointer-events: auto; touch-action: none; }
 #joyBase {
   position: absolute; left: 13cqw; top: calc(100% - 13cqw); width: 18cqw; height: 18cqw; margin: -9cqw 0 0 -9cqw;
-  border-radius: 50%; background: rgba(255,255,255,.10); border: 3px solid rgba(255,255,255,.35); opacity: .5;
+  border-radius: 50%; background: rgba(255,255,255,.03); border: 2px solid rgba(255,255,255,.10);
 }
-#joyBase.active { opacity: 1; }
 #joyKnob {
   position: absolute; left: 50%; top: 50%; width: 8cqw; height: 8cqw; margin: -4cqw 0 0 -4cqw; border-radius: 50%;
-  background: rgba(255,207,58,.75); border: 3px solid rgba(10,10,18,.6); box-shadow: 0 2px 8px rgba(0,0,0,.5);
+  background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.14);
 }
+#joyBase.active { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.18); }
+#joyBase.active #joyKnob { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.25); }
 #touch .btns { position: absolute; right: 3cqw; bottom: 3cqw; display: flex; gap: 2.5cqw; align-items: flex-end; }
 #touch .btns button {
-  pointer-events: auto; touch-action: none; border-radius: 50%; color: #fff; display: grid; place-items: center; align-content: center;
-  background: rgba(255,255,255,.14); border: 3px solid rgba(255,255,255,.45); font-size: 5cqw; line-height: 1; padding: 0;
+  pointer-events: auto; touch-action: none; border-radius: 50%; display: grid; place-items: center; align-content: center;
+  color: rgba(255,255,255,.4); background: rgba(255,255,255,.05); border: 2px solid rgba(255,255,255,.14);
+  font-size: 4.5cqw; line-height: 1; padding: 0;
 }
 #touch .btns small { font-family: 'Bangers', Impact, sans-serif; font-size: 1.6cqw; letter-spacing: 1px; margin-top: .4cqw; }
 #touch .btns .act { width: 12cqw; height: 12cqw; margin-bottom: 7cqw; }
-#touch .btns .jump { width: 16cqw; height: 16cqw; background: rgba(255,207,58,.25); }
-#touch .btns button.on { background: rgba(255,207,58,.55); transform: scale(.94); }
+#touch .btns .jump { width: 15cqw; height: 15cqw; }
+#touch .btns button.on { background: rgba(255,255,255,.18); color: rgba(255,255,255,.7); transform: scale(.94); }
 
-body.touch { padding: 0; height: 100dvh; overflow: hidden; overscroll-behavior: none; }
-body.touch #app { max-width: none; height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-body.touch header { width: 100%; padding: 4px 12px; }
-body.touch header h1 { font-size: 1.4rem; }
-body.touch #stage { width: min(100vw, calc((100dvh - 44px) * 16 / 9)); border: 0; border-radius: 0; box-shadow: none; }
-body.touch.playing header { display: none; }
-body.touch.playing #stage { width: min(100vw, calc(100dvh * 16 / 9)); }
-body.touch #help { display: none; }
-#rotate { display: none; }
-@media (orientation: portrait) {
-  body.touch #rotate {
-    display: flex; position: fixed; inset: 0; z-index: 10; flex-direction: column; align-items: center; justify-content: center;
-    gap: 12px; background: var(--night); text-align: center; padding: 24px;
-  }
-  body.touch #rotate div { font-size: 3.5rem; }
-  body.touch #rotate p { font-family: 'Bangers', Impact, sans-serif; font-size: 2rem; letter-spacing: 1px; color: var(--gold); margin: 0; }
+/* the game fills the screen; black bars keep it 16:9 */
+body.touch { padding: 0; margin: 0; height: 100dvh; overflow: hidden; overscroll-behavior: none; background: #000; }
+body.touch header, body.touch #help { display: none; }
+body.touch #app { max-width: none; height: 100dvh; display: flex; align-items: center; justify-content: center; }
+body.touch #stage { width: min(100vw, calc(100dvh * 16 / 9)); border: 0; border-radius: 0; box-shadow: none; }
+
+/* little bar on the title / ending screens: back link and full-screen button */
+body.touch:not(.playing) #mbar { display: flex; position: absolute; inset: 1.5cqw 1.5cqw auto 1.5cqw; justify-content: space-between; pointer-events: none; }
+#mbar > * {
+  pointer-events: auto; font: inherit; font-size: max(.8rem, 1.8cqw); color: var(--moon); text-decoration: none;
+  background: rgba(0,0,0,.45); border: 2px solid rgba(255,255,255,.3); border-radius: 999px; padding: .3em .9em;
 }
+body.fs #fsBtn, body.nofs #fsBtn, body.fs #rotateFs, body.nofs #rotateFs { display: none; }
+
+/* holding the phone upright: suggest turning it sideways (you can still play if you want) */
+@media (orientation: portrait) {
+  body.touch:not(.portraitOk) #rotate {
+    display: flex; position: fixed; inset: 0; z-index: 10; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; background: var(--night); text-align: center; padding: 24px;
+  }
+  #rotate .phone { font-size: 4rem; animation: turn 2s ease-in-out infinite; }
+  #rotate p { font-family: 'Bangers', Impact, sans-serif; font-size: 2rem; letter-spacing: 1px; color: var(--gold); margin: 0; }
+  #rotate button.big { font-size: 1.5rem; }
+  #rotate .anyway { background: none; border: 0; color: var(--moon); opacity: .7; text-decoration: underline; font: inherit; font-size: 1rem; }
+}
+@keyframes turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }

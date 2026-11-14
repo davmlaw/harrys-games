@@ -17,7 +17,11 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sgn = v => v < 0 ? -1 : 1;
 const hash = n => { n = Math.sin(n * 127.1 + 311.7) * 43758.5453; return n - Math.floor(n); };
 // mobile mode is for touch-first devices only (phones/tablets); ?mobile forces it for testing
-const TOUCH = Q.has('mobile') || matchMedia('(pointer: coarse)').matches;
+const TOUCH = Q.has('mobile') || (!Q.has('desktop') && (
+  matchMedia('(pointer: coarse)').matches ||
+  (matchMedia('(any-pointer: coarse)').matches && matchMedia('(hover: none)').matches) ||
+  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+  (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))));      // iPads pretend to be Macs
 const FONT = s => `${s}px Bangers, Impact, sans-serif`;
 
 // ---------------------------------------------------------------- tunables
@@ -179,13 +183,22 @@ const joy = { id: null, x: 0, y: 0, cx: 0, cy: 0 };
   };
   zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end);
 })();
+const docEl = document.documentElement;
+const fsSupported = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 function goFullscreen() {
-  if (!TOUCH || AUTO || document.fullscreenElement) return;
+  if (!TOUCH || AUTO || isFs() || !fsSupported) return;
   try {
-    const p = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
-    p?.then(() => screen.orientation?.lock?.('landscape')).catch(() => { });
+    const p = docEl.requestFullscreen ? docEl.requestFullscreen({ navigationUI: 'hide' }) : docEl.webkitRequestFullscreen?.();
+    Promise.resolve(p).then(() => screen.orientation?.lock?.('landscape')).catch(() => { });
   } catch (e) { }
 }
+if (!fsSupported) document.body.classList.add('nofs');
+const fsChange = () => document.body.classList.toggle('fs', isFs());
+document.addEventListener('fullscreenchange', fsChange); document.addEventListener('webkitfullscreenchange', fsChange);
+document.getElementById('fsBtn').onclick = () => { ac(); goFullscreen(); };
+document.getElementById('rotateFs').onclick = () => { ac(); goFullscreen(); };
+document.getElementById('anyway').onclick = () => document.body.classList.add('portraitOk');
 const muteBtn = document.getElementById('mute');
 function toggleMute() { muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; }
 muteBtn.onclick = () => { ac(); toggleMute(); muteBtn.blur(); };
