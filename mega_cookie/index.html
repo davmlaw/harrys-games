@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div id="app">
@@ -28,7 +28,13 @@
       </div>
       <div class="mult">
         <div><span class="x">+</span><span id="perAns">5</span></div>
-        <div class="sub">cookies per right answer</div>
+        <div class="sub">per right answer<br><span id="perClick">+1</span> per click</div>
+      </div>
+      <div class="clicker">
+        <div class="cookieWrap">
+          <button id="cookie" aria-label="Click the cookie!"><svg viewBox="0 0 200 200" aria-hidden="true"><use href="#cookieArt"/></svg></button>
+        </div>
+        <div class="toMaths"><div id="toMathsBar"></div><span id="toMaths">Maths challenge in 12 clicks!</span></div>
       </div>
       <div class="quiz">
         <div class="qtop"><span id="level">Level 1</span><span id="streak"></span></div>
@@ -36,7 +42,7 @@
         <div class="timer"><div id="timeBar"></div></div>
         <div class="answers" id="answers"></div>
       </div>
-      <div class="hint" id="hint">Click the cookie with the right answer! Quick = bonus ⚡</div>
+      <div class="hint" id="hint">Click the big cookie!</div>
     </section>
 
     <section class="shop">
@@ -74,7 +80,7 @@
   </div>
 </div>
 
-<div id="ver">v6</div>
-<script src="game.js?v=6"></script>
+<div id="ver">v7</div>
+<script src="game.js?v=7"></script>
 </body>
 </html>

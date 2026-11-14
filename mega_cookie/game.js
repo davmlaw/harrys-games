@@ -1,5 +1,5 @@
 'use strict';
-// Mega Cookie: a maths game. A sum pops up and three cookies show answers.
+// Mega Cookie: click the big cookie a few times (the fun bit), then a sum pops up and three cookies show answers.
 // Click the right cookie to win cookies (answer fast for a speed bonus), click a wrong one and you lose some.
 // Spend cookies in the shop on things that add more cookies to every right answer.
 // Everything is PLUS, never times (Harry's rule).
@@ -46,6 +46,8 @@ function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catc
 const $ = id => document.getElementById(id);
 const owned = it => G.n[it.id] || 0;
 const price = it => Math.ceil(it.cost * Math.pow(PRICE_UP, owned(it)));
+const CLICKS_PER_Q = 12; // clicks on the big cookie before each maths question
+const perClick = () => Math.max(1, Math.round(perAns() / 10));
 const perAns = () => ITEMS.reduce((t, it) => t + owned(it) * (it.pa || 0), BASE_ANSWER);
 
 // ---------- numbers ----------
@@ -93,7 +95,7 @@ const sFast  = () => [1047, 1319, 1568].forEach((f, i) => tone(f, .1 + i * .05, 
 const sLevel = () => [523, 784, 1047, 1568].forEach((f, i) => tone(f, i * .09, .2, 'triangle', .08));
 
 // ---------- maths questions ----------
-// Level goes up after 8 right in a row and down after 3 wrong in a row.
+// Level goes up after 4 right in a row and down after 2 wrong in a row.
 const MAX_LEVEL = 6;
 const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -147,6 +149,7 @@ function renderShop(){
 function update(){
   countEl.textContent = fmt(G.cookies);
   $('perAns').textContent = fmt(perAns());
+  $('perClick').textContent = '+' + fmt(perClick());
   for (const it of ITEMS) {
     const c = price(it), can = G.cookies >= c;
     it.costEl.textContent = fmtShort(c);
@@ -156,7 +159,7 @@ function update(){
     it.bar.style.width = Math.min(100, G.cookies / c * 100) + '%';
   }
   $('goal').textContent = G.won ? '🏆 You got the Golden Cookie! Keep going forever!' :
-    'Answer sums to win cookies, buy things, then get THE GOLDEN COOKIE!';
+    'Click the cookie, answer sums, buy things, then get THE GOLDEN COOKIE!';
   $('level').textContent = 'Level ' + G.level;
   $('streak').textContent = streak >= 3 ? `🔥 ${streak} in a row` : '';
   document.body.classList.toggle('golden', !!G.won);
@@ -188,7 +191,37 @@ function floatText(text, x, y, cls){
   p.style.left = x + (Math.random() * 30 - 15) + 'px'; p.style.top = y + 'px';
   fx.appendChild(p); setTimeout(() => p.remove(), 900);
 }
-function lockThen(ms){ locked = true; answersEl.classList.add('locked'); setTimeout(nextQuestion, ms); }
+function lockThen(ms){ locked = true; answersEl.classList.add('locked'); setTimeout(startClicking, ms); }
+
+// ---------- the fun bit: click the big cookie ----------
+const cookieBtn = $('cookie');
+let clicksLeft = CLICKS_PER_Q;
+function showClicks(){
+  $('toMaths').textContent = clicksLeft === 1 ? 'Maths challenge in 1 click!' : `Maths challenge in ${clicksLeft} clicks!`;
+  $('toMathsBar').style.width = (1 - clicksLeft / CLICKS_PER_Q) * 100 + '%';
+}
+function startClicking(){
+  clicksLeft = CLICKS_PER_Q; locked = true; Q = null;
+  document.body.classList.remove('quizMode'); showClicks();
+}
+function clickCookie(x, y){
+  if (document.body.classList.contains('quizMode')) return;
+  const p = perClick();
+  G.cookies += p; crunch();
+  cookieBtn.classList.add('squish'); setTimeout(() => cookieBtn.classList.remove('squish'), 60);
+  countEl.classList.remove('bump'); void countEl.offsetWidth; countEl.classList.add('bump');
+  floatText('+' + fmt(p), x, y);
+  for (let i = 0; i < 5; i++) crumb(x, y);
+  clicksLeft--; showClicks(); update();
+  if (clicksLeft <= 0) {
+    tone(660, 0, .1, 'square', .06); tone(990, .1, .18, 'square', .06);
+    setTimeout(() => { document.body.classList.add('quizMode'); $('hint').textContent = 'Click the cookie with the right answer! Quick = bonus ⚡'; nextQuestion(); }, 150);
+  }
+}
+cookieBtn.addEventListener('pointerdown', e => { e.preventDefault(); clickCookie(e.clientX, e.clientY); });
+cookieBtn.addEventListener('keydown', e => {
+  if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); const r = cookieBtn.getBoundingClientRect(); clickCookie(r.left + r.width / 2, r.top + r.height / 3); }
+});
 function answer(v, btn, x, y){
   if (locked) return;
   if (v === Q.ans) {
@@ -199,8 +232,8 @@ function answer(v, btn, x, y){
     floatText('+' + fmt(base), x, y);
     if (fast > 0) { setTimeout(() => floatText('+' + fmt(fast) + ' ⚡', x, y - 40, 'fast'), 120); if (qLeft > QTIME / 2) sFast(); }
     for (let i = 0; i < 8; i++) crumb(x, y);
-    if (streak % 8 === 0 && G.level < MAX_LEVEL) { G.level++; sLevel(); setTimeout(() => floatText('LEVEL ' + G.level + '!', innerWidth / 2, innerHeight / 2, 'fast'), 250); }
-    if (G.right > 3) $('hint').classList.add('gone');
+    if (streak % 4 === 0 && G.level < MAX_LEVEL) { G.level++; sLevel(); setTimeout(() => floatText('LEVEL ' + G.level + '!', innerWidth / 2, innerHeight / 2, 'fast'), 250); }
+    if (G.right > 2) $('hint').classList.add('gone');
     lockThen(250);
   } else {
     const lose = Math.min(G.cookies, perAns());
@@ -208,14 +241,14 @@ function answer(v, btn, x, y){
     sNope(); btn.classList.add('wrong');
     floatText(lose > 0 ? '−' + fmt(lose) : 'Oops!', x, y, 'bad');
     for (const b of answersEl.children) if (+b.querySelector('b').textContent === Q.ans) b.classList.add('right'); // show the right one
-    if (wrongRow >= 3 && G.level > 1) { G.level--; wrongRow = 0; }
+    if (wrongRow >= 2 && G.level > 1) { G.level--; wrongRow = 0; }
     lockThen(900);
   }
   countEl.classList.remove('bump'); void countEl.offsetWidth; countEl.classList.add('bump');
   update(); save();
 }
 document.addEventListener('keydown', e => { // keys 1, 2, 3 pick a cookie
-  const i = ['1', '2', '3'].indexOf(e.key); if (i < 0 || e.repeat) return;
+  const i = ['1', '2', '3'].indexOf(e.key); if (i < 0 || e.repeat || !Q) return;
   const b = answersEl.children[i]; if (!b) return;
   const r = b.getBoundingClientRect(); answer(Q.opts[i], b, r.left + r.width / 2, r.top + r.height / 3);
 });
@@ -272,7 +305,7 @@ muteBtn.addEventListener('click', () => { G.muted = !G.muted; showMute(); save()
 $('reset').addEventListener('click', () => {
   if (!confirm('Start again from 0 cookies?')) return;
   G = {cookies:0, n:{}, right:0, muted:G.muted, won:false, level:1}; streak = 0; save();
-  $('hint').classList.remove('gone'); update(); nextQuestion();
+  $('hint').classList.remove('gone'); $('hint').textContent = 'Click the big cookie!'; update(); startClicking();
 });
 
 // ---------- every frame: the question timer ----------
@@ -303,6 +336,6 @@ if (shot) { G = {cookies:+shot || 0, n:{pencil:3, fingers:8, chips:4, ruler:1}, 
 
 showMute();
 renderShop();
-if (G.right > 3) $('hint').classList.add('gone');
-nextQuestion();
+if (G.right > 2) $('hint').classList.add('gone');
+if (new URLSearchParams(location.search).has('quiz')) { document.body.classList.add('quizMode'); nextQuestion(); } else startClicking();
 requestAnimationFrame(loop);
