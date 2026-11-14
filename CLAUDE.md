@@ -19,6 +19,9 @@ The games are independent and share no code.
 - `king_of_the_bins/` — "King of the Bins" (started November 2026), a night-time side-scrolling platformer: a raccoon
   knocks over metal bins, rummages for loot and dodges humans. Split into `index.html`, `style.css`, `game.js`.
   Harry's spec is `1_game_design.txt`.
+- `mega_cookie/` — "Mega Cookie" (started November 2026), a cookie clicker: click the cookie, buy upgrades that
+  multiply cookies per click, aim for THE GOLDEN COOKIE (x100 million, costs 1 trillion). Split into `index.html`,
+  `style.css`, `game.js`. Harry asked for "Cookie Clicker" but that's an existing game's name, so it's called Mega Cookie.
 
 ## Working with Harry
 
@@ -114,6 +117,13 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - **Testing**: `index.html?auto` plays itself (runs right, jumps humans, rummages); `?shot=end` jumps to the ending;
   `?shot=title` holds the title; `?mobile` forces mobile mode. `share.png` (link preview, 1200×630) is rendered from `?mobile&shot=share`
   (1200×675 window, centre-cropped); regenerate it if the title art changes. These use a timer loop so headless `--virtual-time-budget` screenshots advance.
+
+### mega_cookie (`game.js`)
+
+- `ITEMS` is the upgrade ladder (`x` factor, `cost`); per-click = product of every bought `x` (`perClick()`).
+  Costs are tuned so each step takes ~50–110 clicks if bought in order; the last item is the `final` win.
+- State `G` (cookies, `got`, clicks, muted) saves to `localStorage` (`megaCookie1`). Sounds are Web Audio (`crunch`, `tone`).
+- `?shot=N` loads N cookies with the first four upgrades bought (for screenshots).
 
 ### food_wars2 (`index.html`)
 

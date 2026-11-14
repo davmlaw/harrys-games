@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Mega Cookie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <a class="home" href="../index.html" title="Back to Harry's Games">⬅</a>
+    <h1>Mega Cookie</h1>
+    <div class="tools">
+      <button id="mute" title="Sound on/off">🔊</button>
+      <button id="reset" title="Start again">↺</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="bakery">
+      <div class="score">
+        <div class="label">Cookies</div>
+        <div id="count">0</div>
+      </div>
+      <div class="mult">
+        <span class="x">x</span><span id="mult">1</span>
+        <div class="sub"><span id="perClick">1</span> cookie<span id="pcS"></span> every click</div>
+      </div>
+      <div class="cookieWrap">
+        <div class="rays" aria-hidden="true"></div>
+        <button id="cookie" aria-label="Click the cookie!">
+          <svg viewBox="0 0 200 200" aria-hidden="true">
+            <defs>
+              <radialGradient id="dough" cx="40%" cy="35%" r="70%">
+                <stop offset="0" class="d1"/>
+                <stop offset="1" class="d2"/>
+              </radialGradient>
+            </defs>
+            <path class="edge" d="M100 8 C128 6 150 18 168 36 C186 54 194 76 192 102 C191 128 182 150 162 168 C144 184 124 193 98 192 C72 192 50 182 33 166 C16 149 8 128 8 101 C8 74 18 52 36 34 C54 16 74 9 100 8Z"/>
+            <path fill="url(#dough)" d="M100 16 C125 15 145 25 161 41 C177 57 184 77 183 101 C182 124 175 144 157 160 C141 175 122 183 99 183 C75 183 55 175 40 160 C25 145 17 125 17 101 C17 77 25 58 41 42 C57 26 76 17 100 16Z"/>
+            <g class="chips">
+              <path d="M62 52 l14 -4 l6 12 l-10 9 l-12 -5z"/>
+              <path d="M118 40 l12 2 l3 12 l-11 5 l-8 -9z"/>
+              <path d="M146 82 l13 3 l-1 13 l-13 2 l-4 -10z"/>
+              <path d="M90 88 l14 -3 l5 12 l-11 8 l-10 -6z"/>
+              <path d="M44 104 l12 -2 l5 11 l-9 8 l-11 -6z"/>
+              <path d="M124 124 l14 -1 l3 13 l-12 6 l-8 -9z"/>
+              <path d="M76 140 l12 -3 l6 11 l-10 8 l-11 -5z"/>
+              <path d="M104 160 l9 -2 l4 8 l-8 6 l-7 -4z"/>
+            </g>
+            <g class="shine"><ellipse cx="70" cy="44" rx="22" ry="9" transform="rotate(-30 70 44)"/></g>
+          </svg>
+        </button>
+      </div>
+      <div class="hint" id="hint">Click the cookie!</div>
+    </section>
+
+    <section class="shop">
+      <h2>Upgrade Shop</h2>
+      <div id="goal"></div>
+      <ul id="items"></ul>
+    </section>
+  </main>
+</div>
+
+<div id="fx" aria-hidden="true"></div>
+
+<div id="win" hidden>
+  <div class="card">
+    <div class="big">🏆</div>
+    <h2>YOU GOT THE GOLDEN COOKIE!</h2>
+    <p>You are the best cookie clicker ever!<br>Now every click gives you <b id="winPer"></b> cookies.</p>
+    <button id="winOk">Keep clicking!</button>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
