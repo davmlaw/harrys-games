@@ -82,15 +82,20 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 
 ### king_of_the_bins (`game.js`)
 
+- **Belt-scroller depth** (since v2): scenery stands on the `BACK` line; the pavement in front is a walkable strip
+  `ZMIN`..`ZMAX`. Raccoon, humans, bins, lids and rubbish each have a depth `z`; the raccoon also has a jump height
+  `h` (feet drawn at `z - h`). Collisions need matching depth (`|dz|` small). `drawWorld` sorts everything by `z`.
+  One-way platforms (fences, cars, porches, trees) only work from the back strip (`z <= BACKSTRIP`); walk down to drop off.
 - **Endless street** generated in lots (`genLot`): each lot has a house (resident `dad`/`mum`/`granny`), maybe a
   porch roof, fence, car, tree, lamp, and 1–3 bins. `plats` are one-way platforms (land from above, ↓ drops through);
   upright bins add their lids as platforms in `allPlats()`. `ensureWorld` generates ahead and prunes behind the camera.
-- **Bin physics**: touching an upright bin calls `knock()`: the bin pivots on its bottom corner (`ang`/`av`) until it
+- **Bin physics**: running into an upright bin at the same depth calls `knock()`: the bin pivots on its bottom corner (`ang`/`av`) until it
   lies flat, the lid flies off (`lids`, ends in a wobble), and rubbish spills from `binMouth()` into `junk`
   (bouncing particles the raccoon kicks around). Fallen bins are rummaged once (↓) for a roll on `LOOT_TABLE`.
-- **Humans**: knocking a bin `wake()`s the nearest sleeping house → lights on → door opens → human chases with a
+- **Humans**: knocking a bin `wake()`s a sleeping house, preferring ones ahead of the raccoon → lights on → door opens → human chases with a
   timer and gives up (`st` = `out`/`chase`/`stun`/`search`/`flee`/`swing`/`home`). Stomp their heads to stun them;
-  flying lids and falling bins stun them too. Every few bins (`G.nextVan`) an Animal Control van brings a faster
+  flying lids and falling bins stun them too. Neighbourhood Watch patrols (`spawnWatch`, `G.tWatch`) walk in from
+  ahead. Every few bins (`G.nextVan`) an Animal Control van drives in from ahead with a faster
   `catcher` with a net. Touch (or net) = `caught()` unless Stinky Cheese / Butter Fur / Ninja Mask saves you.
 - **Modes**: `title` → `play` → `caught` (cage drops) → `ending` (mugshot, stripes poof on, bars slam, `#endUI` card).
   Night lighting is an offscreen dark layer with holes cut for lamps/windows/torches (`drawLighting`).

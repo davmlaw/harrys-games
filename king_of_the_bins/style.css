@@ -63,7 +63,11 @@ kbd {
 }
 
 #touch { display: none; position: absolute; inset: auto 0 0 0; padding: 2cqw; justify-content: space-between; pointer-events: none; }
-#touch .pad { display: flex; gap: 2cqw; }
+#touch .pad { display: flex; gap: 2cqw; align-items: flex-end; }
+#touch .dpad { display: grid; grid-template-columns: repeat(3, 9cqw); grid-template-rows: repeat(2, 9cqw); gap: .6cqw; }
+#touch .dpad button { width: 9cqw; height: 9cqw; border-radius: 22%; font-size: 3.6cqw; }
+#touch .dpad .u { grid-area: 1 / 2; } #touch .dpad .l { grid-area: 2 / 1; }
+#touch .dpad .d { grid-area: 2 / 2; } #touch .dpad .r { grid-area: 2 / 3; }
 #touch button {
   pointer-events: auto; width: 11cqw; height: 11cqw; border-radius: 50%; font-size: 4.5cqw; color: #fff;
   background: rgba(255,255,255,.14); border: 3px solid rgba(255,255,255,.4);

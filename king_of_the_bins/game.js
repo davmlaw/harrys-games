@@ -3,7 +3,10 @@
 // Everything is drawn procedurally on the 960×540 canvas; sound is synthesized with Web Audio.
 
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
-const W = 960, H = 540, GROUND = 440, GRAV = 1900;
+const W = 960, H = 540, GRAV = 1900;
+// BACK is where houses, fences and cars stand. The pavement in front of them is a strip you can walk up and down,
+// beat-'em-up style: z runs from ZMIN (back) to ZMAX (front, by the road).
+const BACK = 400, ZMIN = 414, ZMAX = 520, BACKSTRIP = ZMIN + 18;
 const Q = new URLSearchParams(location.search);
 const AUTO = Q.has('auto'), SHOT = Q.get('shot');
 
@@ -13,18 +16,19 @@ const pick = a => a[Math.floor(Math.random() * a.length)];
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sgn = v => v < 0 ? -1 : 1;
 const hash = n => { n = Math.sin(n * 127.1 + 311.7) * 43758.5453; return n - Math.floor(n); };
+const TOUCH = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
 const FONT = s => `${s}px Bangers, Impact, sans-serif`;
 
 // ---------------------------------------------------------------- tunables
 const CFG = {
-  run: 270, zoomMul: 1.6, jump: 760, springJump: 980,
+  run: 270, zrun: 200, zoomMul: 1.6, jump: 760, springJump: 980,
   rummageTime: 0.85,
   binW: 40, binH: 56,
-  wakeRange: 460,
   humans: {
     dad:     { speed: 175, chase: 10, say: ['OI! My bins!', 'Get back here!', 'You bandit!', 'Not AGAIN!'] },
     mum:     { speed: 185, chase: 10, say: ['RACCOON!!', 'Shoo! SHOO!', 'Look at this mess!', 'Come here, you!'] },
     granny:  { speed: 130, chase: 9,  say: ['You rascal!', 'My begonias!', 'Wait till I catch you!', 'Cheeky bandit!'] },
+    watch:   { speed: 190, chase: 11, say: ['Neighbourhood Watch!', 'Stop right there!', 'I see you, bandit!', 'Halt!'] },
     catcher: { speed: 235, chase: 16, say: ['Animal Control!', 'Got a live one!', 'Come quietly!', "You're nicked!"] },
   },
 };
@@ -65,7 +69,7 @@ const rankIdx = n => { let r = 0; RANKS.forEach((e, i) => { if (n >= e[0]) r = i
 
 const HOUSE_COLS = ['#4d5b80', '#6d4f63', '#4f6b5c', '#7a6a4a', '#5e5585', '#7a5146', '#4a6572'];
 const CAR_COLS = ['#7a2f35', '#2f4f7a', '#4a6a3a', '#6a6a72', '#8a6a2a'];
-const PJ = { dad: '#3c5fa8', mum: '#d46aa0', granny: '#7d4fa0', catcher: '#a08a4a' };
+const PJ = { dad: '#3c5fa8', mum: '#d46aa0', granny: '#7d4fa0', catcher: '#a08a4a', watch: '#d8e040' };
 
 // ---------------------------------------------------------------- sound
 let AC = null, muted = false;
@@ -124,7 +128,8 @@ function sfx(n, ...a) { try { SFX[n](...a); } catch (e) { } }
 
 // ---------------------------------------------------------------- input
 const keys = {}, pressed = {};
-const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', ArrowDown: 'down', KeyS: 'down', Enter: 'enter' };
+const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
+  Space: 'jump', KeyZ: 'jump', KeyK: 'jump', KeyX: 'act', KeyE: 'act', KeyJ: 'act', Enter: 'act' };
 addEventListener('keydown', e => {
   const k = KEYMAP[e.code];
   if (e.code === 'KeyM') { toggleMute(); return; }
@@ -132,12 +137,12 @@ addEventListener('keydown', e => {
   e.preventDefault(); ac();
   if (!keys[k]) pressed[k] = true;
   keys[k] = true;
-  if ((k === 'enter' || k === 'jump') && mode === 'title') startGame();
-  if (k === 'enter' && mode === 'ending' && E.t > 3) startGame();
+  if ((k === 'act' || k === 'jump') && mode === 'title') startGame();
+  if (k === 'act' && mode === 'ending' && E.t > 3) startGame();
 });
 addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
-if (matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window) document.body.classList.add('touch');
+if (TOUCH) document.body.classList.add('touch');
 document.querySelectorAll('#touch button').forEach(b => {
   const k = b.dataset.k;
   const on = e => { e.preventDefault(); ac(); if (!keys[k]) pressed[k] = true; keys[k] = true; b.classList.add('on'); };
@@ -167,9 +172,9 @@ function resetWorld() {
   lots = []; plats = []; bins = []; junk = []; lids = []; humans = []; vans = []; parts = []; floats = [];
   nextLotX = -120; lotIdx = 0;
   G = { score: 0, knocked: 0, rummaged: 0, treasure: 0, stomps: 0, best: loadBest(), cam: 0, shake: 0, rank: 0,
-    nextVan: 7, banner: null, far: 0, time: 0, hint: 0, causeOfCapture: '' };
-  P = { x: 140, y: GROUND, vx: 0, vy: 0, face: 1, onGround: true, coyote: 0, jbuf: 0, anim: 0, rum: null, drop: 0,
-    inv: 0, squash: 1, pw: { zoom: 0, spring: 0, stink: 0, ninja: 0 }, butter: false, prevY: GROUND };
+    nextVan: 7, tWatch: 14, banner: null, far: 0, time: 0, hint: 0, causeOfCapture: '' };
+  P = { x: 140, z: 470, h: 0, y: 470, vx: 0, vz: 0, vh: 0, face: 1, onGround: true, coyote: 0, jbuf: 0, anim: 0, rum: null,
+    inv: 0, squash: 1, pw: { zoom: 0, spring: 0, stink: 0, ninja: 0 }, butter: false, prevH: 0, sup: 0 };
   ensureWorld();
 }
 function startGame() {
@@ -205,43 +210,43 @@ function genLot() {
   };
   const rows = hh > 178 ? 2 : 1;
   for (let r = 0; r < rows; r++) {
-    const wy = GROUND - hh + 26 + r * 76;
+    const wy = BACK - hh + 26 + r * 76;
     for (let wx = hx + 22; wx + 40 < hx + hw - 14; wx += 70) {
       if (r === rows - 1 && Math.abs(wx + 20 - door) < 44) continue;
       house.wins.push({ x: wx - hx, y: wy, w: 40, h: 44, on: Math.random() < .15 });
     }
   }
-  if (house.porch) plats.push({ x: door - 50, y: GROUND - 106, w: 100 });
-  if (house.roof === 'flat') plats.push({ x: hx - 6, y: GROUND - hh - 8, w: hw + 12 });
+  if (house.porch) plats.push({ x: door - 50, y: BACK - 106, w: 100 });
+  if (house.roof === 'flat') plats.push({ x: hx - 6, y: BACK - hh - 8, w: hw + 12 });
   const lot = { x, w, house, car: null, fence: null, tree: null, lamp: null, hedge: null };
 
   const fw = ri(90, 150);
-  if (Math.random() < .65) { lot.fence = { x: x + w - fw, w: fw }; plats.push({ x: x + w - fw, y: GROUND - 58, w: fw }); }
+  if (Math.random() < .65) { lot.fence = { x: x + w - fw, w: fw }; plats.push({ x: x + w - fw, y: BACK - 58, w: fw }); }
   const space = (lot.fence ? lot.fence.x : x + w) - (hx + hw);
   if (space >= 175 && Math.random() < .5) {
     const cx = hx + hw + ri(8, space - 165);
     lot.car = { x: cx, w: 155, col: pick(CAR_COLS) };
-    plats.push({ x: cx + 4, y: GROUND - 46, w: 147 });
-    plats.push({ x: cx + 38, y: GROUND - 80, w: 78 });
+    plats.push({ x: cx + 4, y: BACK - 46, w: 147 });
+    plats.push({ x: cx + 38, y: BACK - 80, w: 78 });
   } else if (space > 90 && Math.random() < .6) {
     lot.hedge = { x: hx + hw + 10, w: Math.min(space - 20, ri(70, 130)) };
   }
   if (Math.random() < .4) {
     const tx = hx + (Math.random() < .5 ? ri(-10, 30) : hw - ri(-10, 30));
     lot.tree = { x: tx };
-    plats.push({ x: tx - 4, y: GROUND - 132, w: 74 });
-    plats.push({ x: tx - 50, y: GROUND - 228, w: 100 });
+    plats.push({ x: tx - 4, y: BACK - 132, w: 74 });
+    plats.push({ x: tx - 50, y: BACK - 228, w: 100 });
   }
   if (Math.random() < .5) lot.lamp = { x: x + ri(40, w - 40) };
   lots.push(lot);
 
   // bins along the sidewalk, not on top of cars
-  const n = i === 0 ? 2 : ri(1, 3), slots = [];
-  for (let sx = x + 40; sx < x + w - 30; sx += 64) slots.push(sx + ri(-8, 8));
+  const n = i === 0 ? 2 : ri(2, 3), slots = [];
+  for (let sx = x + 40; sx < x + w - 30; sx += 80) slots.push(sx + ri(-8, 8));
   const okSlots = slots.filter(s => !(lot.car && s > lot.car.x - 24 && s < lot.car.x + lot.car.w + 24) && !(i === 0 && s < 300));
   for (let k = 0; k < n && okSlots.length; k++) {
     const s = okSlots.splice(ri(0, okSlots.length - 1), 1)[0];
-    bins.push({ x: s, w: CFG.binW, h: CFG.binH, st: 'up', ang: 0, av: 0, dir: 1, emit: 0, done: false,
+    bins.push({ x: s, z: ri(ZMIN + 6, ZMAX - 6), w: CFG.binW, h: CFG.binH, st: 'up', ang: 0, av: 0, dir: 1, emit: 0, done: false,
       gold: i > 1 && Math.random() < .07, wob: 0, dent: Math.random() });
   }
   nextLotX = x + w;
@@ -259,13 +264,13 @@ function sparkle(x, y, n, col = '#ffe680') {
 }
 function binMouth(b) {
   const px = b.x + b.dir * b.w / 2, lx0 = -b.dir * b.w / 2, ly0 = -b.h, c = Math.cos(b.ang), s = Math.sin(b.ang);
-  return { x: px + lx0 * c - ly0 * s, y: GROUND + lx0 * s + ly0 * c };
+  return { x: px + lx0 * c - ly0 * s, y: b.z + lx0 * s + ly0 * c };
 }
 const JUNK_KINDS = ['can', 'paper', 'paper', 'banana', 'bone', 'bottle', 'apple', 'bag', 'box', 'paper'];
-function spawnJunk(x, y, dir, n, sp = 1) {
+function spawnJunk(x, y, dir, n, sp, z) {
   for (let i = 0; i < n; i++) {
-    junk.push({ x, y, vx: dir * rand(60, 380) * sp + rand(-40, 40), vy: -rand(80, 380) * sp, r: rand(0, 6), vr: rand(-12, 12),
-      k: pick(JUNK_KINDS), rest: false, dz: rand(0, 26), c: Math.random() });
+    junk.push({ x, y, z: clamp(z + rand(-18, 18), ZMIN - 4, ZMAX + 12), vx: dir * rand(60, 380) * sp + rand(-40, 40), vy: -rand(80, 380) * sp,
+      r: rand(0, 6), vr: rand(-12, 12), k: pick(JUNK_KINDS), rest: false, c: Math.random() });
   }
 }
 
@@ -273,9 +278,9 @@ function spawnJunk(x, y, dir, n, sp = 1) {
 function knock(b, dir) {
   b.st = 'fall'; b.dir = dir; b.av = dir * 4.5; b.emit = ri(12, 18);
   G.knocked++;
-  addScore(b.gold ? 30 : 10, b.x, GROUND - 80, b.gold ? '#ffd84a' : '#fff');
-  lids.push({ x: b.x, y: GROUND - b.h - 4, vx: dir * rand(200, 420) + P.vx * .3, vy: -rand(420, 650), rot: 0, vr: dir * rand(10, 20),
-    st: 'fly', wob: 0, wt: 0, gold: b.gold, tick: 0 });
+  addScore(b.gold ? 30 : 10, b.x, b.z - 80, b.gold ? '#ffd84a' : '#fff');
+  lids.push({ x: b.x, z: b.z + rand(-4, 4), y: b.z - b.h - 4, vx: dir * rand(200, 420) + P.vx * .3, vy: -rand(420, 650), rot: 0,
+    vr: dir * rand(10, 20), st: 'fly', wob: 0, wt: 0, gold: b.gold, tick: 0 });
   sfx('clang'); shake(5);
   wake(b.x);
   const r = rankIdx(G.knocked);
@@ -284,27 +289,24 @@ function knock(b, dir) {
 }
 function updateBins(dt) {
   for (const b of bins) {
-    if (b.st === 'up') {
-      b.wob *= Math.pow(.02, dt);
-      continue;
-    }
+    if (b.st === 'up') { b.wob *= Math.pow(.02, dt); continue; }
     if (b.st === 'fall') {
       b.av += b.dir * (10 + 18 * Math.abs(Math.sin(b.ang))) * dt;
       b.ang += b.av * dt;
       if (b.dir * b.ang >= Math.PI / 2) {
         b.ang = b.dir * Math.PI / 2;
-        if (Math.abs(b.av) > 3) { b.av = -b.av * .28; sfx('thud'); shake(3); puff(binMouth(b).x, GROUND, 5, 'rgba(150,150,170,.5)', 60); }
+        if (Math.abs(b.av) > 3) { b.av = -b.av * .28; sfx('thud'); shake(3); puff(binMouth(b).x, b.z, 5, 'rgba(150,150,170,.5)', 60); }
         else { b.st = 'down'; b.av = 0; }
       }
-      // falling bin bonks humans
+      // a falling bin bonks any human it lands on
       for (const h of humans) {
         const lo = Math.min(b.x, b.x + b.dir * b.h), hi = Math.max(b.x, b.x + b.dir * b.h);
-        if (h.st !== 'stun' && h.st !== 'home' && h.x > lo && h.x < hi && b.dir * b.ang > .9) stun(h, 2.2, 'OOF!');
+        if (h.st !== 'stun' && h.st !== 'home' && h.x > lo && h.x < hi && Math.abs(h.z - b.z) < 18 && b.dir * b.ang > .9) stun(h, 2.2, 'OOF!');
       }
     }
     if (b.emit > 0 && b.dir * b.ang > .6) {
       const m = binMouth(b), k = Math.min(b.emit, 3);
-      spawnJunk(m.x, m.y, b.dir, k); b.emit -= k;
+      spawnJunk(m.x, m.y, b.dir, k, 1, b.z); b.emit -= k;
     }
   }
 }
@@ -316,13 +318,13 @@ function updateLids(dt) {
       l.vy += GRAV * dt; l.x += l.vx * dt; l.y += l.vy * dt; l.rot += l.vr * dt;
       if (Math.hypot(l.vx, l.vy) > 220) {
         for (const h of humans) {
-          if (h.st !== 'stun' && h.st !== 'home' && Math.abs(h.x - l.x) < 22 && l.y > GROUND - 86 && l.y < GROUND - 10) {
-            stun(h, 2.5, 'BONK!'); l.vx *= -.4; l.vy = -200; sfx('clang', .7); addScore(25, h.x, GROUND - 110, '#8ef');
+          if (h.st !== 'stun' && h.st !== 'home' && Math.abs(h.x - l.x) < 22 && Math.abs(h.z - l.z) < 20 && l.y > h.z - 86 && l.y < h.z - 10) {
+            stun(h, 2.5, 'BONK!'); l.vx *= -.4; l.vy = -200; sfx('clang', .7); addScore(25, h.x, h.z - 110, '#8ef');
           }
         }
       }
-      if (l.y >= GROUND - 4) {
-        l.y = GROUND - 4;
+      if (l.y >= l.z - 4) {
+        l.y = l.z - 4;
         if (l.vy > 260) { l.vy *= -.42; l.vx *= .7; l.vr *= .6; sfx('clang', .5); }
         else { l.st = 'wob'; l.vy = 0; l.wob = 1; l.wt = 0; l.rot = 0; }
       }
@@ -339,15 +341,14 @@ function updateLids(dt) {
 function updateJunk(dt) {
   for (const j of junk) {
     if (j.rest) {
-      if (mode === 'play' && P.onGround && Math.abs(P.vx) > 150 && Math.abs(P.x - j.x) < 16 && P.y >= GROUND - 2 && Math.random() < .5) {
+      if (mode === 'play' && P.h < 1 && Math.abs(P.vx) > 150 && Math.abs(P.x - j.x) < 16 && Math.abs(P.z - j.z) < 12 && Math.random() < .5) {
         j.rest = false; j.vy = -rand(90, 240); j.vx = P.vx * rand(.4, .9); j.vr = rand(-10, 10);
       }
       continue;
     }
     j.vy += GRAV * dt; j.x += j.vx * dt; j.y += j.vy * dt; j.r += j.vr * dt;
-    const gy = GROUND - 3 + j.dz;
-    if (j.y >= gy) {
-      j.y = gy;
+    if (j.y >= j.z) {
+      j.y = j.z;
       if (j.vy > 140) { j.vy *= -.35; j.vx *= .55; j.vr *= .5; }
       else { j.rest = true; j.vy = 0; j.vx = 0; }
     }
@@ -356,18 +357,20 @@ function updateJunk(dt) {
 
 // ---------------------------------------------------------------- houses and humans
 function wake(x) {
-  const cands = lots.map(l => l.house).filter(h => h.st === 'sleep' && !h.sleepy && Math.abs(h.door - x) < CFG.wakeRange)
-    .sort((a, b) => Math.abs(a.door - x) - Math.abs(b.door - x));
-  const p = Math.min(.92, .5 + G.knocked * .03);
-  if (cands.length && Math.random() < p) { const h = cands[0]; h.st = 'waking'; h.t = rand(.5, 1.1); }
+  // wake houses AHEAD of the raccoon first, so people come out in front of you, not just behind
+  const hs = lots.map(l => l.house).filter(h => h.st === 'sleep' && !h.sleepy && h.door > x - 300 && h.door < x + 850);
+  const score = h => (h.door > P.x + 150 ? 0 : 1000) + Math.abs(h.door - (P.x + 520));
+  hs.sort((a, b) => score(a) - score(b));
+  const p = Math.min(.95, .55 + G.knocked * .03), n = G.knocked >= 12 ? 2 : 1;
+  for (let i = 0; i < Math.min(n, hs.length); i++) if (Math.random() < p) { hs[i].st = 'waking'; hs[i].t = rand(.3, .7) + i * .8; }
 }
 function updateHouses(dt) {
   for (const l of lots) {
     const h = l.house;
-    if (h.st === 'waking') { h.t -= dt; if (h.t <= 0) { h.lit = 1; h.st = 'opening'; h.t = .9; if (onScreen(h.door)) sfx('huh'); } }
+    if (h.st === 'waking') { h.t -= dt; if (h.t <= 0) { h.lit = 1; h.st = 'opening'; h.t = .6; if (onScreen(h.door)) sfx('huh'); } }
     else if (h.st === 'opening') {
       h.t -= dt; h.open = Math.min(1, h.open + dt * 3);
-      if (h.t <= 0) { spawnHuman(h.res, h.door, h); h.st = 'out'; if (onScreen(h.door)) sfx('door'); }
+      if (h.t <= 0) { spawnHuman(h.res, h.door, h, ZMIN + 2); h.st = 'out'; if (onScreen(h.door)) sfx('door'); }
     } else if (h.st === 'out') { h.open = Math.max(.6, h.open); }
     else if (h.st === 'cool') {
       h.t -= dt; h.open = Math.max(0, h.open - dt * 2);
@@ -376,32 +379,44 @@ function updateHouses(dt) {
     }
   }
 }
-function spawnHuman(type, x, house) {
+function spawnHuman(type, x, house, z) {
   const cf = CFG.humans[type];
-  const hum = { type, x, vx: 0, face: sgn(P.x - x), st: 'out', t: .5, house, anim: 0, say: '', sayT: 0, stun: 0,
-    chaseT: 0, patience: 0, speed: cf.speed * (1 + Math.min(.3, G.far / 30000)), van: null, swing: 0, hair: Math.random() };
+  const hum = { type, x, z, vx: 0, vz: 0, face: sgn(P.x - x), st: 'out', t: .5, house, anim: 0, say: '', sayT: 0, stun: 0,
+    chaseT: 0, patience: 0, speed: cf.speed * (1 + Math.min(.3, G.far / 30000)), van: null, swing: 0, hair: Math.random(), pz: z };
   say(hum, pick(cf.say));
   humans.push(hum);
   return hum;
 }
-function stun(h, d, txt) { h.st = 'stun'; h.stun = d; h.vx = 0; say(h, txt); sparkle(h.x, GROUND - 80, 8, '#fff6a0'); }
+function spawnWatch() {
+  const h = spawnHuman('watch', G.cam + W + 40, null, rand(ZMIN + 10, ZMAX - 10));
+  h.st = 'patrol'; h.face = -1; h.t = 0; h.sayT = 0;
+}
+function stun(h, d, txt) { h.st = 'stun'; h.stun = d; h.vx = 0; h.vz = 0; say(h, txt); sparkle(h.x, h.z - 80, 8, '#fff6a0'); }
 function goHome(h, txt) { h.st = 'home'; if (txt) say(h, txt); }
-const reachable = (h) => P.y > GROUND - (h && h.type === 'catcher' ? 130 : 70);
+// grown-ups can grab a raccoon up to 70px off the ground; the catcher's net reaches 130
+const reachable = h => P.h < (h && h.type === 'catcher' ? 130 : 70);
+const HEAD = 82;
 
 function updateHumans(dt) {
   for (const h of humans) {
-    h.sayT -= dt; h.anim += dt * Math.abs(h.vx) / 18;
-    const dx = P.x - h.x, cf = CFG.humans[h.type];
+    h.sayT -= dt; h.anim += dt * (Math.abs(h.vx) + Math.abs(h.vz)) / 18;
+    const dx = P.x - h.x, dz = P.z - h.z, cf = CFG.humans[h.type];
+    let tz = null;                       // the depth this human is walking toward
     if (h.st === 'out') { h.vx = 0; h.t -= dt; if (h.t <= 0) h.st = 'chase'; }
-    else if (h.st === 'stun') {
+    else if (h.st === 'patrol') {
+      h.vx = h.face * 70; h.t -= dt; tz = h.pz;
+      if (h.t <= 0) { h.t = rand(1, 2.5); h.pz = rand(ZMIN + 10, ZMAX - 10); }
+      if (mode === 'play' && P.pw.ninja <= 0 && Math.abs(dx) < 380) { h.st = 'chase'; say(h, pick(cf.say)); if (onScreen(h.x)) sfx('huh'); }
+      if (h.x < G.cam - 200) h.gone = true;
+    } else if (h.st === 'stun') {
       h.vx = 0; h.stun -= dt;
       if (h.stun <= 0) h.st = h.chaseT > cf.chase ? 'home' : 'chase';
     } else if (h.st === 'flee') {
-      h.t -= dt; h.face = -sgn(dx); h.vx = h.face * h.speed * 1.1;
+      h.t -= dt; h.face = -sgn(dx); h.vx = h.face * h.speed * 1.1; tz = h.z - sgn(dz) * 60;
       if (h.t <= 0) h.st = 'chase';
     } else if (h.st === 'search') {
-      h.chaseT += dt * .5; h.t -= dt;
-      if (h.t <= 0) { h.t = rand(.6, 1.4); h.face = pick([-1, 1]); if (Math.random() < .4) say(h, pick(["Where'd it go?", 'Hmm...', 'I know you\'re here!'])); }
+      h.chaseT += dt * .5; h.t -= dt; tz = h.pz;
+      if (h.t <= 0) { h.t = rand(.6, 1.4); h.face = pick([-1, 1]); h.pz = rand(ZMIN, ZMAX); if (Math.random() < .4) say(h, pick(["Where'd it go?", 'Hmm...', "I know you're here!"])); }
       h.vx = h.face * 60;
       if (P.pw.ninja <= 0) h.st = 'chase';
       if (h.chaseT > cf.chase) goHome(h, 'Pesky bandit...');
@@ -410,15 +425,14 @@ function updateHumans(dt) {
       if (mode !== 'play') { h.vx = 0; }
       else if (P.pw.ninja > 0) { h.st = 'search'; h.t = 0; say(h, "Huh? Where'd it go?"); }
       else if (h.chaseT > cf.chase || Math.abs(dx) > 900) goHome(h, pick(['Pesky bandit!', 'Next time...', 'Ugh, raccoons!']));
-      else if (!reachable(h) && Math.abs(dx) < 70) {
+      else if (!reachable(h) && Math.abs(dx) < 70 && Math.abs(dz) < 40) {
         h.vx = 0; h.face = sgn(dx); h.patience += dt;
         if (h.sayT < -.3) say(h, pick(['Get DOWN here!', 'I can see you!', 'Come down!']));
         if (h.patience > 3.5) goHome(h, 'Fine! Stay up there!');
-      } else if (h.type === 'catcher' && Math.abs(dx) < 92 && reachable(h)) {
+      } else if (h.type === 'catcher' && Math.abs(dx) < 92 && Math.abs(dz) < 16 && reachable(h)) {
         h.st = 'swing'; h.t = 0; h.vx = 0; h.face = sgn(dx);
       } else {
-        h.face = sgn(dx);
-        h.vx = h.face * h.speed;
+        h.face = sgn(dx); h.vx = Math.abs(dx) < 6 ? 0 : h.face * h.speed; tz = P.z;
         if (h.sayT < -2.5 && Math.random() < dt) say(h, pick(cf.say));
       }
     } else if (h.st === 'swing') {
@@ -426,28 +440,34 @@ function updateHumans(dt) {
       if (h.t >= .42 && h.t - dt < .42) {
         sfx('swish');
         const rel = (P.x - h.x) * h.face;
-        if (mode === 'play' && rel > -5 && rel < 105 && P.y > GROUND - 130) grabbed(h);
+        if (mode === 'play' && rel > -5 && rel < 105 && Math.abs(P.z - h.z) < 20 && P.h < 130) grabbed(h);
       }
       if (h.t > .85) { h.st = 'chase'; h.swing = 0; }
     } else if (h.st === 'home') {
-      const tx = h.van ? h.van.x + 40 : h.house.door;
-      h.face = sgn(tx - h.x); h.vx = h.face * h.speed * .55;
-      if (Math.abs(tx - h.x) < 8) {
-        h.gone = true;
-        if (h.house) { h.house.st = 'cool'; h.house.t = 14; sfx('door'); }
-        if (h.van) h.van.st = 'leave';
+      if (h.van || h.house) {
+        const tx = h.van ? h.van.x + 30 : h.house.door; tz = h.van ? ZMAX : ZMIN + 2;
+        h.face = sgn(tx - h.x); h.vx = h.face * h.speed * .55;
+        if (Math.abs(tx - h.x) < 8) {
+          h.gone = true;
+          if (h.house) { h.house.st = 'cool'; h.house.t = 14; sfx('door'); }
+          if (h.van) h.van.st = 'leave';
+        }
+      } else {
+        // neighbourhood watch just wanders off
+        h.face = h.x > P.x ? 1 : -1; h.vx = h.face * h.speed * .6;
+        if (h.x < G.cam - 150 || h.x > G.cam + W + 150) h.gone = true;
       }
     }
-    h.x += h.vx * dt;
+    if (tz !== null) h.vz = clamp((tz - h.z) * 5, -h.speed * .45, h.speed * .45); else h.vz = 0;
+    h.x += h.vx * dt; h.z = clamp(h.z + h.vz * dt, ZMIN, ZMAX);
 
     // contact with the raccoon
     if (mode === 'play' && h.st !== 'stun' && h.st !== 'home' && h.st !== 'out' && P.inv <= 0) {
-      const top = GROUND - 82;
-      if (Math.abs(dx) < 30 && P.vy > 0 && P.prevY <= top + 14 && P.y >= top - 4) {
+      if (Math.abs(dx) < 30 && Math.abs(dz) < 18 && P.vh < 0 && P.prevH >= HEAD - 14 && P.h <= HEAD + 4) {
         stun(h, 2.6, pick(['OW!', 'OOF!', 'My head!', 'Argh!']));
-        P.vy = -(P.pw.spring > 0 ? 820 : 640); P.y = top - 4; P.onGround = false;
-        G.stomps++; addScore(25, h.x, top - 30, '#8ef'); sfx('stomp');
-      } else if (Math.abs(dx) < 26 && reachable(h) && P.pw.ninja <= 0 && h.st !== 'swing') {
+        P.vh = P.pw.spring > 0 ? 820 : 640; P.h = HEAD + 4; P.onGround = false;
+        G.stomps++; addScore(25, h.x, h.z - 112, '#8ef'); sfx('stomp');
+      } else if (Math.abs(dx) < 24 && Math.abs(dz) < 13 && reachable(h) && P.pw.ninja <= 0 && h.st !== 'swing') {
         grabbed(h);
       }
     }
@@ -460,15 +480,15 @@ function grabbed(h) {
   if (P.butter) {
     P.butter = false; P.inv = 1.6; stun(h, 1.5, 'Slippery!'); sfx('slip');
     floats.push({ x: P.x, y: P.y - 60, txt: 'SLIPPED FREE!', col: '#ffe27a', t: 0, big: true });
-    P.vy = -560; P.onGround = false; P.vx = -sgn(h.x - P.x) * 400;
+    P.vh = 560; P.onGround = false; P.vx = -sgn(h.x - P.x) * 400;
     return;
   }
   caught(h);
 }
 
-// ---------------------------------------------------------------- animal control van
+// ---------------------------------------------------------------- animal control van (drives in from ahead)
 function spawnVan() {
-  vans.push({ x: G.cam - 260, st: 'in', stopX: Math.max(G.cam + 30, P.x - 380), t: 0, flash: 0 });
+  vans.push({ x: G.cam + W + 240, st: 'in', t: 0, flash: 0 });
   sfx('siren');
   floats.push({ x: W / 2, y: 150, txt: 'ANIMAL CONTROL!', col: '#ff9a3a', t: 0, big: true, screen: true });
 }
@@ -476,17 +496,15 @@ function updateVans(dt) {
   for (const v of vans) {
     v.flash += dt;
     if (v.st === 'in') {
-      v.stopX = Math.max(v.stopX, G.cam - 40);
-      v.x += 460 * dt;
-      if (v.x >= v.stopX) {
-        v.st = 'park'; v.t = 0;
-        const hm = spawnHuman('catcher', v.x + 60, null); hm.van = v; hm.t = .35; sfx('door');
+      v.x -= 460 * dt;
+      if (v.x <= Math.max(P.x + 240, G.cam + W * .45)) {
+        v.st = 'park';
+        const hm = spawnHuman('catcher', v.x + 30, null, ZMAX - 4); hm.van = v; hm.t = .35; sfx('door');
       }
     } else if (v.st === 'leave') {
-      v.x += 520 * dt;
-      if (v.x > G.cam + W + 400) v.gone = true;
-    } else if (v.st === 'park' && v.x < G.cam - 600) {
-      // left behind: send its officer home the quick way
+      v.x -= 520 * dt;
+      if (v.x < G.cam - 400) v.gone = true;
+    } else if (v.st === 'park' && v.x < G.cam - 700) {
       v.gone = true; humans.forEach(h => { if (h.van === v) h.gone = true; });
     }
   }
@@ -494,71 +512,70 @@ function updateVans(dt) {
 }
 
 // ---------------------------------------------------------------- player
-function allPlats() {
-  const list = plats.slice();
-  for (const b of bins) if (b.st === 'up') list.push({ x: b.x - b.w / 2, y: GROUND - b.h - 6, w: b.w, bin: b });
-  return list;
+// The raccoon has a depth (z: up/down the pavement) and a height (h: jumping).
+// Its feet are drawn at screen y = z - h.
+function supports() {
+  const s = [0];
+  if (P.z <= BACKSTRIP) for (const p of plats) if (P.x + 14 > p.x && P.x - 14 < p.x + p.w) s.push(ZMIN + 6 - p.y);
+  for (const b of bins) if (b.st === 'up' && Math.abs(P.x - b.x) < b.w / 2 + 6 && Math.abs(P.z - b.z) < 14) s.push(b.h + 6);
+  return s;
 }
 function updatePlayer(dt) {
-  const L = keys.left ? 1 : 0, R = keys.right ? 1 : 0;
-  let ax = R - L;
+  let ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), az = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
   for (const k in P.pw) P.pw[k] = Math.max(0, P.pw[k] - dt);
-  P.inv = Math.max(0, P.inv - dt); P.drop = Math.max(0, P.drop - dt);
-  P.prevY = P.y;
+  P.inv = Math.max(0, P.inv - dt);
+  P.prevH = P.h;
 
   if (P.rum) {
-    ax = 0; P.rum.t += dt;
-    if (Math.random() < dt * 14) { const m = binMouth(P.rum.b); spawnJunk(m.x, m.y - 6, P.rum.b.dir, 1, .7); sfx('rustle'); }
+    ax = 0; az = 0; P.rum.t += dt;
+    if (Math.random() < dt * 14) { const m = binMouth(P.rum.b); spawnJunk(m.x, m.y - 6, P.rum.b.dir, 1, .7, P.rum.b.z); sfx('rustle'); }
     if (pressed.jump) { P.rum = null; }
     else if (P.rum.t >= CFG.rummageTime) finishRummage();
   }
 
-  const spd = CFG.run * (P.pw.zoom > 0 ? CFG.zoomMul : 1);
-  P.vx += (ax * spd - P.vx) * Math.min(1, dt * (P.onGround ? 12 : 6));
+  const fast = P.pw.zoom > 0 ? CFG.zoomMul : 1;
+  P.vx += (ax * CFG.run * fast - P.vx) * Math.min(1, dt * (P.onGround ? 12 : 6));
+  P.vz += (az * CFG.zrun * fast - P.vz) * Math.min(1, dt * 14);
   if (ax) P.face = ax;
   if (P.pw.zoom > 0 && Math.abs(P.vx) > 200 && Math.random() < .5) parts.push({ x: P.x - P.face * 20, y: P.y - rand(5, 30), vx: -P.face * 60, vy: 0, life: .3, t: 0, r: 3, col: '#ff6a3a', k: 'spark' });
 
   if (pressed.jump && !P.rum) P.jbuf = .13;
   P.jbuf -= dt; P.coyote -= dt;
   if (P.jbuf > 0 && P.coyote > 0) {
-    P.vy = -(P.pw.spring > 0 ? CFG.springJump : CFG.jump); P.coyote = 0; P.jbuf = 0; P.onGround = false; P.squash = .7;
+    P.vh = P.pw.spring > 0 ? CFG.springJump : CFG.jump; P.coyote = 0; P.jbuf = 0; P.onGround = false; P.squash = .7;
     sfx(P.pw.spring > 0 ? 'spring' : 'jump');
   }
-  if (!keys.jump && P.vy < -250) P.vy += GRAV * 1.4 * dt;   // short hop when you let go
-  P.vy += GRAV * dt;
+  if (!keys.jump && P.vh > 250) P.vh -= GRAV * 1.4 * dt;   // short hop when you let go
+  P.vh -= GRAV * dt;
 
-  if (pressed.down && P.onGround && !P.rum) {
-    const b = bins.find(b => b.st === 'down' && !b.done && Math.abs(P.x - (binMouth(b).x + b.dir * 14)) < 46);
-    if (b) { P.rum = { b, t: 0 }; P.face = -b.dir; P.x = binMouth(b).x + b.dir * 18; P.vx = 0; }
-    else if (P.y < GROUND) P.drop = .25;
+  if (pressed.act && P.onGround && !P.rum) {
+    const b = bins.find(b => b.st === 'down' && !b.done && Math.abs(P.x - (binMouth(b).x + b.dir * 14)) < 46 && Math.abs(P.z - b.z) < 18);
+    if (b) { P.rum = { b, t: 0 }; P.face = -b.dir; P.x = binMouth(b).x + b.dir * 18; P.z = b.z; P.vx = 0; P.vz = 0; }
   }
 
-  // vertical movement and landing
-  let ny = P.y + P.vy * dt, landed = false;
-  if (P.vy >= 0) {
-    if (ny >= GROUND) { ny = GROUND; landed = true; }
-    else if (P.drop <= 0) {
-      for (const p of allPlats()) {
-        if (P.x + 14 > p.x && P.x - 14 < p.x + p.w && P.y <= p.y + 1 && ny >= p.y) { ny = p.y; landed = true; if (p.bin) p.bin.wob = 1; break; }
-      }
-    }
-  }
-  if (landed) {
-    if (!P.onGround && P.vy > 500) { P.squash = 1.3; puff(P.x, ny, 4, 'rgba(160,160,180,.45)', 50); }
-    P.vy = 0; P.onGround = true; P.coyote = .1;
+  P.x = Math.max(30, P.x + P.vx * dt);
+  P.z = clamp(P.z + P.vz * dt, ZMIN, ZMAX);
+
+  // falling / landing on the ground, a platform or a bin lid
+  const sup = supports();
+  let nh = P.h + P.vh * dt, best = -1;
+  if (P.vh <= 0) for (const s of sup) if (s <= P.h + 1 && nh <= s && s > best) best = s;
+  P.sup = Math.max(...sup.filter(s => s <= P.h + 1));
+  if (best >= 0) {
+    if (!P.onGround && P.vh < -500) { P.squash = 1.3; puff(P.x, P.z - best, 4, 'rgba(160,160,180,.45)', 50); }
+    if (best > 0) bins.forEach(b => { if (b.st === 'up' && Math.abs(P.x - b.x) < b.w / 2 + 6 && Math.abs(P.z - b.z) < 14 && !P.onGround) b.wob = 1; });
+    nh = best; P.vh = 0; P.onGround = true; P.coyote = .1;
   } else P.onGround = false;
-  P.y = ny;
+  P.h = nh; P.y = P.z - P.h;
 
-  P.x += P.vx * dt;
-  P.x = Math.max(30, P.x);
   G.far = Math.max(G.far, P.x);
   P.squash += (1 - P.squash) * Math.min(1, dt * 10);
-  P.anim += dt * (P.onGround ? Math.abs(P.vx) / 22 : 0);
+  P.anim += dt * (P.onGround ? Math.hypot(P.vx, P.vz) / 22 : 0);
 
-  // bump into a standing bin to knock it over
+  // run into a standing bin — but only if you're lined up with it
   for (const b of bins) {
     if (b.st !== 'up') continue;
-    if (Math.abs(P.x - b.x) < b.w / 2 + 14 && P.y > GROUND - b.h + 4) {
+    if (Math.abs(P.x - b.x) < b.w / 2 + 14 && Math.abs(P.z - b.z) < 13 && P.h < b.h - 6) {
       knock(b, Math.abs(P.vx) > 20 ? sgn(P.vx) : sgn(b.x - P.x));
       P.vx *= .6;
     }
@@ -567,11 +584,11 @@ function updatePlayer(dt) {
 function finishRummage() {
   const b = P.rum.b; P.rum = null; b.done = true; G.rummaged++;
   const id = roll(b.gold ? GOLD_TABLE : LOOT_TABLE), it = LOOT[id], m = binMouth(b);
-  floats.push({ x: m.x, y: GROUND - 60, item: id, txt: it.n, col: it.k === 'treasure' ? '#ffd84a' : it.k === 'power' ? '#8ef' : '#fff', t: 0, big: true, sub: it.desc });
-  addScore(it.p, m.x, GROUND - 120, '#fff');
-  if (it.k === 'treasure') { G.treasure++; sfx('treasure'); sparkle(m.x, GROUND - 60, 16); }
+  floats.push({ x: m.x, y: b.z - 60, item: id, txt: it.n, col: it.k === 'treasure' ? '#ffd84a' : it.k === 'power' ? '#8ef' : '#fff', t: 0, big: true, sub: it.desc });
+  addScore(it.p, m.x, b.z - 120, '#fff');
+  if (it.k === 'treasure') { G.treasure++; sfx('treasure'); sparkle(m.x, b.z - 60, 16); }
   else if (it.k === 'power') {
-    sfx('power'); sparkle(m.x, GROUND - 60, 12, '#8ef');
+    sfx('power'); sparkle(m.x, b.z - 60, 12, '#8ef');
     if (id === 'butter') P.butter = true; else P.pw[id] = it.d;
   } else sfx('food');
 }
@@ -580,20 +597,20 @@ function finishRummage() {
 function caught(h) {
   mode = 'caught';
   C = { t: 0, h, cageY: P.y - 320, landed: false };
-  h.st = 'grab'; h.vx = 0; h.face = sgn(P.x - h.x);
+  h.st = 'grab'; h.vx = 0; h.vz = 0; h.face = sgn(P.x - h.x);
   say(h, h.type === 'catcher' ? 'GOT YOU!' : 'GOTCHA!');
-  P.rum = null; P.vx = 0;
-  G.causeOfCapture = { dad: 'a grumpy dad in his dressing gown', mum: 'an angry mum in hair curlers', granny: 'a very cross granny', catcher: 'the Animal Control officer' }[h.type];
+  P.rum = null; P.vx = 0; P.vz = 0;
+  G.causeOfCapture = { dad: 'a grumpy dad in his dressing gown', mum: 'an angry mum in hair curlers', granny: 'a very cross granny',
+    catcher: 'the Animal Control officer', watch: 'the Neighbourhood Watch' }[h.type];
   sfx('huh');
 }
 function updateCaught(dt) {
   C.t += dt;
-  P.vy += GRAV * dt; P.y = Math.min(GROUND, P.y + P.vy * dt);
-  if (P.y >= GROUND) P.vy = 0;
-  const target = P.y;
+  if (P.h > 0) { P.vh -= GRAV * dt; P.h = Math.max(0, P.h + P.vh * dt); }
+  P.y = P.z - P.h;
   if (C.t > .45 && !C.landed) {
-    C.cageY = Math.min(target, C.cageY + (C.t - .45) * 1800 * dt * 3);
-    if (C.cageY >= target) { C.landed = true; sfx('cage'); shake(10); puff(P.x, GROUND, 10, 'rgba(170,170,190,.5)', 120); }
+    C.cageY = Math.min(P.y, C.cageY + (C.t - .45) * 1800 * dt * 3);
+    if (C.cageY >= P.y) { C.landed = true; sfx('cage'); shake(10); puff(P.x, P.z, 10, 'rgba(170,170,190,.5)', 120); }
   }
   if (C.t > 2.4) startEnding();
 }
@@ -633,7 +650,14 @@ function update(dt) {
   if (mode === 'title') { titleCam += dt * 35; return; }
   if (mode === 'ending') { updateEnding(dt); return; }
   G.time += dt; G.hint -= dt;
-  if (mode === 'play') updatePlayer(dt);
+  if (mode === 'play') {
+    updatePlayer(dt);
+    G.tWatch -= dt;
+    if (G.tWatch <= 0) {
+      G.tWatch = Math.max(5, rand(9, 15) - G.knocked * .15);
+      if (G.knocked >= 2 && humans.length < 2 + G.knocked / 8) spawnWatch();
+    }
+  }
   else if (mode === 'caught') updateCaught(dt);
   updateBins(dt); updateLids(dt); updateJunk(dt); updateHouses(dt); updateHumans(dt); updateVans(dt);
   for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.k === 'spark') p.vy += 400 * dt; else { p.vx *= .92; p.vy -= 20 * dt; } }
@@ -659,7 +683,7 @@ function text(t, x, y, size, col, align = 'center', stroke = '#0a0a12', sw = 5) 
 }
 
 function drawSky(cam) {
-  const g = ctx.createLinearGradient(0, 0, 0, GROUND);
+  const g = ctx.createLinearGradient(0, 0, 0, BACK);
   g.addColorStop(0, '#060818'); g.addColorStop(.6, '#141a44'); g.addColorStop(1, '#2b2557');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   for (const s of STARS) {
@@ -688,7 +712,7 @@ function drawFar(cam) {
   let off = cam * .25, sw = 90;
   ctx.fillStyle = '#121838';
   for (let i = Math.floor(off / sw) - 1; i < (off + W) / sw + 1; i++) {
-    const x = i * sw - off, h = 50 + hash(i) * 70, base = GROUND - 40;
+    const x = i * sw - off, h = 50 + hash(i) * 70, base = BACK - 40;
     if (hash(i + .3) < .65) {
       ctx.fillRect(x, base - h, sw - 6, h + 40);
       ctx.beginPath(); ctx.moveTo(x - 6, base - h); ctx.lineTo(x + (sw - 6) / 2, base - h - 30); ctx.lineTo(x + sw, base - h); ctx.fill();
@@ -700,30 +724,31 @@ function drawFar(cam) {
   for (let i = Math.floor(off / sw) - 1; i < (off + W) / sw + 1; i++) {
     if (hash(i * 3.1) < .45) continue;
     const x = i * sw - off + hash(i) * 60, h = 90 + hash(i + 9) * 80;
-    ctx.fillRect(x - 5, GROUND - h, 10, h);
-    ell(x, GROUND - h, 45 + hash(i + 2) * 25, 40 + hash(i + 4) * 20); ctx.fill();
-    ell(x - 30, GROUND - h + 25, 35, 30); ctx.fill(); ell(x + 30, GROUND - h + 20, 35, 30); ctx.fill();
+    ctx.fillRect(x - 5, BACK - h, 10, h);
+    ell(x, BACK - h, 45 + hash(i + 2) * 25, 40 + hash(i + 4) * 20); ctx.fill();
+    ell(x - 30, BACK - h + 25, 35, 30); ctx.fill(); ell(x + 30, BACK - h + 20, 35, 30); ctx.fill();
   }
 }
 function drawGround(cam) {
-  ctx.fillStyle = '#1f3326'; ctx.fillRect(0, GROUND - 6, W, 8);
-  ctx.fillStyle = '#454a62'; ctx.fillRect(0, GROUND, W, 32);
-  ctx.fillStyle = '#5d6382'; ctx.fillRect(0, GROUND, W, 3);
-  ctx.strokeStyle = '#363a50'; ctx.lineWidth = 2; ctx.beginPath();
-  for (let x = -((cam % 64) + 64) % 64; x < W; x += 64) { ctx.moveTo(x, GROUND + 3); ctx.lineTo(x - 8, GROUND + 32); }
+  ctx.fillStyle = '#1f3326'; ctx.fillRect(0, BACK - 6, W, 14);
+  ctx.fillStyle = '#454a62'; ctx.fillRect(0, BACK + 8, W, 92);
+  ctx.fillStyle = '#5d6382'; ctx.fillRect(0, BACK + 8, W, 3);
+  ctx.strokeStyle = '#393d54'; ctx.lineWidth = 2; ctx.beginPath();
+  for (let x = -((cam % 80) + 80) % 80; x < W + 40; x += 80) { ctx.moveTo(x, BACK + 11); ctx.lineTo(x - 26, BACK + 100); }
+  ctx.moveTo(0, BACK + 55); ctx.lineTo(W, BACK + 55);
   ctx.stroke();
-  ctx.fillStyle = '#7c8199'; ctx.fillRect(0, GROUND + 32, W, 6);
-  ctx.fillStyle = '#1c1e2c'; ctx.fillRect(0, GROUND + 38, W, H - GROUND - 38);
+  ctx.fillStyle = '#7c8199'; ctx.fillRect(0, BACK + 100, W, 7);
+  ctx.fillStyle = '#1c1e2c'; ctx.fillRect(0, BACK + 107, W, H - BACK - 107);
   ctx.fillStyle = 'rgba(230,200,90,.35)';
-  for (let x = -((cam % 120) + 120) % 120; x < W; x += 120) ctx.fillRect(x, H - 26, 60, 5);
+  for (let x = -((cam % 120) + 120) % 120; x < W; x += 120) ctx.fillRect(x, H - 9, 60, 4);
 }
 
 function drawHouse(h, cam) {
-  const sx = h.x - cam, y0 = GROUND - h.h;
+  const sx = h.x - cam, y0 = BACK - h.h;
   if (sx > W + 40 || sx + h.w < -40) return;
   ctx.fillStyle = h.col; ctx.fillRect(sx, y0, h.w, h.h);
   ctx.strokeStyle = 'rgba(0,0,0,.12)'; ctx.lineWidth = 1; ctx.beginPath();
-  for (let y = y0 + 10; y < GROUND; y += 11) { ctx.moveTo(sx, y); ctx.lineTo(sx + h.w, y); }
+  for (let y = y0 + 10; y < BACK; y += 11) { ctx.moveTo(sx, y); ctx.lineTo(sx + h.w, y); }
   ctx.stroke();
   const roofC = '#2a2233';
   if (h.chim) { ctx.fillStyle = '#5a3a34'; ctx.fillRect(sx + h.w * .72, y0 - 62, 24, 50); ctx.fillStyle = '#3a2622'; ctx.fillRect(sx + h.w * .72 - 3, y0 - 66, 30, 7); }
@@ -749,72 +774,72 @@ function drawHouse(h, cam) {
   }
   // door
   const dx = h.door - cam;
-  ctx.fillStyle = '#2a1e1a'; ctx.fillRect(dx - 19, GROUND - 66, 38, 66);
+  ctx.fillStyle = '#2a1e1a'; ctx.fillRect(dx - 19, BACK - 66, 38, 66);
   if (h.open > 0) {
-    ctx.fillStyle = '#ffd98a'; ctx.fillRect(dx - 16, GROUND - 63, 32, 63);
-    lights.push({ x: dx, y: GROUND - 30, r: 110, a: .8 * h.open });
-    ctx.fillStyle = '#6a3a28'; ctx.fillRect(dx - 16, GROUND - 63, 32 * (1 - h.open * .8), 63);
+    ctx.fillStyle = '#ffd98a'; ctx.fillRect(dx - 16, BACK - 63, 32, 63);
+    lights.push({ x: dx, y: BACK - 30, r: 110, a: .8 * h.open });
+    ctx.fillStyle = '#6a3a28'; ctx.fillRect(dx - 16, BACK - 63, 32 * (1 - h.open * .8), 63);
   } else {
-    ctx.fillStyle = '#6a3a28'; ctx.fillRect(dx - 16, GROUND - 63, 32, 63);
-    ctx.fillStyle = '#d8b04a'; ell(dx + 10, GROUND - 32, 2.5, 2.5); ctx.fill();
+    ctx.fillStyle = '#6a3a28'; ctx.fillRect(dx - 16, BACK - 63, 32, 63);
+    ctx.fillStyle = '#d8b04a'; ell(dx + 10, BACK - 32, 2.5, 2.5); ctx.fill();
   }
-  ctx.fillStyle = '#ddd'; ctx.font = FONT(13); ctx.textAlign = 'center'; ctx.fillText(h.num, dx, GROUND - 72);
+  ctx.fillStyle = '#ddd'; ctx.font = FONT(13); ctx.textAlign = 'center'; ctx.fillText(h.num, dx, BACK - 72);
   // porch light
-  ctx.fillStyle = h.lit > 0 ? '#ffe9a0' : '#555'; ctx.fillRect(dx + 24, GROUND - 58, 6, 9);
-  if (h.lit > 0) lights.push({ x: dx + 27, y: GROUND - 54, r: 90, a: .7 * h.lit, glow: true });
+  ctx.fillStyle = h.lit > 0 ? '#ffe9a0' : '#555'; ctx.fillRect(dx + 24, BACK - 58, 6, 9);
+  if (h.lit > 0) lights.push({ x: dx + 27, y: BACK - 54, r: 90, a: .7 * h.lit, glow: true });
   if (h.porch) {
-    ctx.fillStyle = '#3a2f3a'; ctx.fillRect(dx - 50, GROUND - 106, 100, 9);
-    ctx.fillStyle = '#2a222a'; ctx.beginPath(); ctx.moveTo(dx - 54, GROUND - 106); ctx.lineTo(dx + 54, GROUND - 106); ctx.lineTo(dx + 48, GROUND - 114); ctx.lineTo(dx - 48, GROUND - 114); ctx.fill();
-    ctx.fillStyle = '#b8b0a0'; ctx.fillRect(dx - 47, GROUND - 97, 5, 97); ctx.fillRect(dx + 42, GROUND - 97, 5, 97);
+    ctx.fillStyle = '#3a2f3a'; ctx.fillRect(dx - 50, BACK - 106, 100, 9);
+    ctx.fillStyle = '#2a222a'; ctx.beginPath(); ctx.moveTo(dx - 54, BACK - 106); ctx.lineTo(dx + 54, BACK - 106); ctx.lineTo(dx + 48, BACK - 114); ctx.lineTo(dx - 48, BACK - 114); ctx.fill();
+    ctx.fillStyle = '#b8b0a0'; ctx.fillRect(dx - 47, BACK - 97, 5, 97); ctx.fillRect(dx + 42, BACK - 97, 5, 97);
   }
-  ctx.fillStyle = '#5a5560'; ctx.fillRect(dx - 26, GROUND - 6, 52, 6);
+  ctx.fillStyle = '#5a5560'; ctx.fillRect(dx - 26, BACK - 6, 52, 6);
 }
 function drawFence(f, cam) {
   const sx = f.x - cam; if (sx > W || sx + f.w < 0) return;
   ctx.fillStyle = '#8f8a80';
-  ctx.fillRect(sx, GROUND - 44, f.w, 6); ctx.fillRect(sx, GROUND - 20, f.w, 6);
+  ctx.fillRect(sx, BACK - 44, f.w, 6); ctx.fillRect(sx, BACK - 20, f.w, 6);
   ctx.fillStyle = '#b5afa2';
   for (let x = sx + 2; x < sx + f.w - 8; x += 14) {
-    ctx.beginPath(); ctx.moveTo(x, GROUND); ctx.lineTo(x, GROUND - 52); ctx.lineTo(x + 5, GROUND - 58); ctx.lineTo(x + 10, GROUND - 52); ctx.lineTo(x + 10, GROUND); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x, BACK); ctx.lineTo(x, BACK - 52); ctx.lineTo(x + 5, BACK - 58); ctx.lineTo(x + 10, BACK - 52); ctx.lineTo(x + 10, BACK); ctx.fill();
   }
 }
 function drawHedge(hd, cam) {
   const sx = hd.x - cam; if (sx > W || sx + hd.w < 0) return;
   ctx.fillStyle = '#1d3a26';
-  rr(sx, GROUND - 46, hd.w, 46, 18); ctx.fill();
+  rr(sx, BACK - 46, hd.w, 46, 18); ctx.fill();
   ctx.fillStyle = '#244a30';
-  for (let x = sx + 12; x < sx + hd.w - 8; x += 20) { ell(x, GROUND - 40, 13, 10); ctx.fill(); }
+  for (let x = sx + 12; x < sx + hd.w - 8; x += 20) { ell(x, BACK - 40, 13, 10); ctx.fill(); }
 }
 function drawCar(c, cam) {
   const sx = c.x - cam; if (sx > W || sx + c.w < 0) return;
   ctx.fillStyle = c.col;
-  rr(sx + 34, GROUND - 82, 86, 40, 12); ctx.fill();
-  rr(sx, GROUND - 50, c.w, 36, 10); ctx.fill();
-  ctx.fillStyle = '#1b2236'; rr(sx + 42, GROUND - 76, 33, 28, 5); ctx.fill(); rr(sx + 80, GROUND - 76, 33, 28, 5); ctx.fill();
-  ctx.fillStyle = 'rgba(160,180,255,.15)'; ctx.fillRect(sx + 48, GROUND - 74, 6, 24);
-  ctx.fillStyle = '#ffe9a0'; ctx.fillRect(sx + c.w - 8, GROUND - 44, 7, 7);
-  ctx.fillStyle = '#a03030'; ctx.fillRect(sx + 1, GROUND - 44, 6, 7);
+  rr(sx + 34, BACK - 82, 86, 40, 12); ctx.fill();
+  rr(sx, BACK - 50, c.w, 36, 10); ctx.fill();
+  ctx.fillStyle = '#1b2236'; rr(sx + 42, BACK - 76, 33, 28, 5); ctx.fill(); rr(sx + 80, BACK - 76, 33, 28, 5); ctx.fill();
+  ctx.fillStyle = 'rgba(160,180,255,.15)'; ctx.fillRect(sx + 48, BACK - 74, 6, 24);
+  ctx.fillStyle = '#ffe9a0'; ctx.fillRect(sx + c.w - 8, BACK - 44, 7, 7);
+  ctx.fillStyle = '#a03030'; ctx.fillRect(sx + 1, BACK - 44, 6, 7);
   for (const wx of [sx + 32, sx + c.w - 32]) {
-    ctx.fillStyle = '#111'; ell(wx, GROUND - 12, 15, 15); ctx.fill();
-    ctx.fillStyle = '#777'; ell(wx, GROUND - 12, 6, 6); ctx.fill();
+    ctx.fillStyle = '#111'; ell(wx, BACK - 12, 15, 15); ctx.fill();
+    ctx.fillStyle = '#777'; ell(wx, BACK - 12, 6, 6); ctx.fill();
   }
 }
 function drawTree(t, cam) {
   const sx = t.x - cam; if (sx > W + 80 || sx < -100) return;
-  ctx.fillStyle = '#3a2a22'; ctx.fillRect(sx + 18, GROUND - 230, 20, 230);
+  ctx.fillStyle = '#3a2a22'; ctx.fillRect(sx + 18, BACK - 230, 20, 230);
   ctx.strokeStyle = '#3a2a22'; ctx.lineWidth = 9; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(sx + 28, GROUND - 120); ctx.lineTo(sx + 70, GROUND - 132); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx + 28, BACK - 120); ctx.lineTo(sx + 70, BACK - 132); ctx.stroke();
   ctx.lineCap = 'butt';
   ctx.fillStyle = '#1b3324';
-  ell(sx + 28, GROUND - 240, 70, 32); ctx.fill(); ell(sx - 12, GROUND - 210, 44, 30); ctx.fill(); ell(sx + 70, GROUND - 205, 44, 30); ctx.fill();
-  ctx.fillStyle = '#21402c'; ell(sx + 20, GROUND - 248, 40, 18); ctx.fill();
+  ell(sx + 28, BACK - 240, 70, 32); ctx.fill(); ell(sx - 12, BACK - 210, 44, 30); ctx.fill(); ell(sx + 70, BACK - 205, 44, 30); ctx.fill();
+  ctx.fillStyle = '#21402c'; ell(sx + 20, BACK - 248, 40, 18); ctx.fill();
 }
 function drawLamp(l, cam) {
   const sx = l.x - cam; if (sx > W + 200 || sx < -200) return;
-  ctx.fillStyle = '#2a2d38'; ctx.fillRect(sx - 3, GROUND - 200, 6, 200);
-  ctx.fillRect(sx - 3, GROUND - 200, 26, 5);
-  ctx.fillStyle = '#fff2c0'; rr(sx + 12, GROUND - 197, 20, 9, 3); ctx.fill();
-  lights.push({ x: sx + 22, y: GROUND - 190, r: 210, a: .95, glow: true, cone: true });
+  ctx.fillStyle = '#2a2d38'; ctx.fillRect(sx - 3, BACK - 200, 6, 200);
+  ctx.fillRect(sx - 3, BACK - 200, 26, 5);
+  ctx.fillStyle = '#fff2c0'; rr(sx + 12, BACK - 197, 20, 9, 3); ctx.fill();
+  lights.push({ x: sx + 22, y: BACK - 190, r: 210, a: .95, glow: true, cone: true });
 }
 
 // ----- the old metal bin
@@ -849,20 +874,21 @@ function drawBin(b, cam) {
   const sx = b.x - cam; if (sx > W + 80 || sx < -80) return;
   ctx.save();
   if (b.st === 'up') {
-    ctx.translate(sx, GROUND); ctx.rotate(Math.sin(T * 30) * b.wob * .05);
+    shadow(sx, b.z, 24, .3);
+    ctx.translate(sx, b.z); ctx.rotate(Math.sin(T * 30) * b.wob * .05);
     binBody(b.w, b.h, b.gold, b.dent, false);
     ctx.translate(0, -b.h - 2); lidShape(b.w, b.gold);
-    if (b.gold && Math.random() < .08) parts.push({ x: b.x + rand(-20, 20), y: GROUND - rand(10, 60), vx: 0, vy: -20, life: .6, t: 0, r: 2.5, col: '#ffe680', k: 'spark' });
+    if (b.gold && Math.random() < .08) parts.push({ x: b.x + rand(-20, 20), y: b.z - rand(10, 60), vx: 0, vy: -20, life: .6, t: 0, r: 2.5, col: '#ffe680', k: 'spark' });
   } else {
-    ctx.translate(sx + b.dir * b.w / 2, GROUND); ctx.rotate(b.ang); ctx.translate(-b.dir * b.w / 2, 0);
+    ctx.translate(sx + b.dir * b.w / 2, b.z); ctx.rotate(b.ang); ctx.translate(-b.dir * b.w / 2, 0);
     binBody(b.w, b.h, b.gold, b.dent, true);
   }
   ctx.restore();
   if (b.st === 'down' && !b.done && mode === 'play' && !(P.rum && P.rum.b === b)) {
-    const m = binMouth(b), near = Math.abs(P.x - (m.x + b.dir * 14)) < 46 && P.onGround;
+    const m = binMouth(b), near = Math.abs(P.x - (m.x + b.dir * 14)) < 46 && Math.abs(P.z - b.z) < 18 && P.onGround;
     const bob = Math.sin(T * 5) * 3;
     ctx.globalAlpha = near ? 1 : .55;
-    text(near ? '↓ RUMMAGE' : '?', m.x + b.dir * 6 - cam, GROUND - 52 + bob, near ? 18 : 22, near ? '#ffe27a' : '#fff', 'center', '#0a0a12', 4);
+    text(near ? (TOUCH ? '🔍 RUMMAGE' : 'X = RUMMAGE') : '?', m.x + b.dir * 6 - cam, b.z - 52 + bob, near ? 18 : 22, near ? '#ffe27a' : '#fff', 'center', '#0a0a12', 4);
     ctx.globalAlpha = 1;
   }
 }
@@ -939,13 +965,14 @@ function drawRaccoon(x, y, face, o = {}) {
 // ----- humans (feet at 0, ~82px tall)
 function drawHuman(h, cam) {
   const sx = h.x - cam; if (sx > W + 60 || sx < -60) return;
-  ctx.save(); ctx.translate(sx, GROUND); ctx.scale(h.face, 1);
+  shadow(sx, h.z, 20, .35);
+  ctx.save(); ctx.translate(sx, h.z); ctx.scale(h.face, 1);
   const moving = Math.abs(h.vx) > 5, a = h.anim, stunned = h.st === 'stun';
   if (stunned) ctx.rotate(Math.sin(T * 6) * .08);
   const skin = h.type === 'granny' ? '#e8c4a8' : h.hair < .5 ? '#e0b090' : '#9a6a48';
   const pj = PJ[h.type];
   // legs
-  ctx.strokeStyle = h.type === 'catcher' ? '#4a4030' : '#d8cfc0'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.strokeStyle = h.type === 'catcher' || h.type === 'watch' ? '#3a3a48' : '#d8cfc0'; ctx.lineWidth = 7; ctx.lineCap = 'round';
   const s = moving ? Math.sin(a) * .6 : 0;
   ctx.beginPath(); ctx.moveTo(-3, -30); ctx.lineTo(-3 + Math.sin(s) * 18, -30 + Math.cos(s) * 26); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(3, -30); ctx.lineTo(3 - Math.sin(s) * 18, -30 + Math.cos(s) * 26); ctx.stroke();
@@ -955,6 +982,7 @@ function drawHuman(h, cam) {
   // body (dressing gown / uniform)
   ctx.fillStyle = pj; rr(-14, -64, 28, 40, 8); ctx.fill();
   if (h.type === 'dad') { ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.beginPath(); for (let y = -60; y < -26; y += 7) { ctx.moveTo(-14, y); ctx.lineTo(14, y); } ctx.stroke(); }
+  if (h.type === 'watch') { ctx.fillStyle = '#c0c0c0'; ctx.fillRect(-14, -50, 28, 3); ctx.fillRect(-14, -38, 28, 3); }
   if (h.type === 'catcher') { ctx.fillStyle = '#ff9a3a'; ctx.fillRect(-14, -50, 28, 5); ctx.fillStyle = '#e8d070'; ell(6, -56, 4, 4); ctx.fill(); }
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-14, -42, 28, 4);
   // head
@@ -974,7 +1002,7 @@ function drawHuman(h, cam) {
     ctx.fillStyle = '#d8d8e0'; ctx.beginPath(); ctx.arc(-1, -76, 11, Math.PI * .85, Math.PI * 1.95); ctx.fill(); ell(-10, -82, 6, 6); ctx.fill();
     ctx.strokeStyle = '#222'; ctx.lineWidth = 1.2; ell(5, -75, 3.5, 3); ctx.stroke();
   } else {
-    ctx.fillStyle = '#3a4a2a'; ctx.fillRect(-11, -86, 22, 8); ctx.fillRect(0, -80, 16, 3);
+    ctx.fillStyle = h.type === 'watch' ? '#2a3a6a' : '#3a4a2a'; ctx.fillRect(-11, -86, 22, 8); ctx.fillRect(0, -80, 16, 3);
   }
   // arms + held thing
   ctx.strokeStyle = pj; ctx.lineWidth = 6; ctx.lineCap = 'round';
@@ -993,16 +1021,16 @@ function drawHuman(h, cam) {
     const sw2 = reach ? Math.sin(a * 2) * .3 : 0;
     ctx.beginPath(); ctx.moveTo(0, -58); ctx.lineTo(reach ? 20 : 6, reach ? -60 + sw2 * 10 : -38); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-2, -58); ctx.lineTo(reach ? 18 : -6, reach ? -52 - sw2 * 10 : -38); ctx.stroke();
-    if (h.type === 'dad') { ctx.fillStyle = '#333'; ctx.fillRect(18, -64, 10, 6); lights.push({ x: sx + h.face * 28, y: GROUND - 61, cone: h.face, a: .55 }); }
+    if (h.type === 'dad' || h.type === 'watch') { ctx.fillStyle = '#333'; ctx.fillRect(18, -64, 10, 6); lights.push({ x: sx + h.face * 28, y: h.z - 61, cone: h.face, a: .55 }); }
     if (h.type === 'granny') { ctx.strokeStyle = '#a07a4a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-8, -70); ctx.lineTo(-14, -2); ctx.stroke(); ctx.fillStyle = '#c8a050'; ctx.beginPath(); ctx.moveTo(-14, -6); ctx.lineTo(-24, 0); ctx.lineTo(-4, 0); ctx.fill(); }
     if (h.type === 'mum') { ctx.fillStyle = '#c8a070'; ctx.save(); ctx.translate(20, -58); ctx.rotate(-.6 + sw2); ctx.fillRect(-3, -14, 6, 22); ctx.restore(); }
   }
   ctx.lineCap = 'butt';
   ctx.restore();
-  if (stunned) for (let i = 0; i < 3; i++) { const an = T * 5 + i * 2.1; text('★', sx + Math.cos(an) * 14, GROUND - 92 + Math.sin(an) * 4, 13, '#ffe27a', 'center', '#0a0a12', 3); }
-  if (h.st === 'search') text('?', sx, GROUND - 100, 24, '#fff');
-  if (h.st === 'chase' && !reachable(h) && Math.abs(P.x - h.x) < 70) text('!', sx + h.face * 4, GROUND - 100, 24, '#ff6a5a');
-  if (h.sayT > 0) bubble(h.say, sx, GROUND - 106);
+  if (stunned) for (let i = 0; i < 3; i++) { const an = T * 5 + i * 2.1; text('★', sx + Math.cos(an) * 14, h.z - 92 + Math.sin(an) * 4, 13, '#ffe27a', 'center', '#0a0a12', 3); }
+  if (h.st === 'search') text('?', sx, h.z - 100, 24, '#fff');
+  if (h.st === 'chase' && !reachable(h) && Math.abs(P.x - h.x) < 70) text('!', sx + h.face * 4, h.z - 100, 24, '#ff6a5a');
+  if (h.sayT > 0) bubble(h.say, sx, h.z - 106);
 }
 function bubble(t, x, y) {
   ctx.font = FONT(16); const w = ctx.measureText(t).width + 16;
@@ -1013,18 +1041,21 @@ function bubble(t, x, y) {
   ctx.fillStyle = '#0a0a12'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t, x, y - 13);
 }
 function drawVan(v, cam) {
-  const sx = v.x - cam; if (sx > W + 200 || sx < -260) return;
-  const y = H - 6;
-  ctx.fillStyle = '#e8e4da'; rr(sx, y - 82, 170, 66, 8); ctx.fill();
-  ctx.fillStyle = '#e8e4da'; rr(sx + 160, y - 62, 52, 46, 8); ctx.fill();
-  ctx.fillStyle = '#1b2236'; rr(sx + 172, y - 58, 30, 20, 4); ctx.fill();
+  const sx = v.x - cam; if (sx > W + 300 || sx < -260) return;
+  const y = H - 2;
+  shadow(sx + 106, y - 2, 110, .4);
+  ctx.fillStyle = '#e8e4da'; rr(sx + 42, y - 82, 170, 66, 8); ctx.fill();
+  rr(sx, y - 62, 52, 46, 8); ctx.fill();
+  ctx.fillStyle = '#1b2236'; rr(sx + 10, y - 58, 30, 20, 4); ctx.fill();
   ctx.fillStyle = '#ff8a2a'; ctx.fillRect(sx, y - 46, 212, 8);
-  ctx.fillStyle = '#c84a1a'; ctx.font = FONT(15); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('ANIMAL CONTROL', sx + 12, y - 64);
+  ctx.fillStyle = '#c84a1a'; ctx.font = FONT(15); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('ANIMAL CONTROL', sx + 66, y - 64);
+  ctx.fillStyle = '#ffe9a0'; ctx.fillRect(sx + 1, y - 40, 7, 8);
   const on = Math.floor(v.flash * 6) % 2;
-  ctx.fillStyle = on ? '#ff3a2a' : '#3a6aff'; rr(sx + 60, y - 92, 40, 10, 3); ctx.fill();
-  lights.push({ x: sx + 80, y: y - 90, r: 140, a: .6, glow: true, col: on ? 'rgba(255,60,40,.35)' : 'rgba(60,100,255,.35)' });
-  for (const wx of [sx + 36, sx + 180]) { ctx.fillStyle = '#111'; ell(wx, y - 14, 15, 15); ctx.fill(); ctx.fillStyle = '#888'; ell(wx, y - 14, 6, 6); ctx.fill(); }
+  ctx.fillStyle = on ? '#ff3a2a' : '#3a6aff'; rr(sx + 112, y - 92, 40, 10, 3); ctx.fill();
+  lights.push({ x: sx + 132, y: y - 90, r: 140, a: .6, glow: true, col: on ? 'rgba(255,60,40,.35)' : 'rgba(60,100,255,.35)' });
+  for (const wx of [sx + 32, sx + 176]) { ctx.fillStyle = '#111'; ell(wx, y - 14, 15, 15); ctx.fill(); ctx.fillStyle = '#888'; ell(wx, y - 14, 6, 6); ctx.fill(); }
 }
+function shadow(x, y, r, a) { ctx.fillStyle = `rgba(0,0,0,${a})`; ell(x, y, r, r * .28); ctx.fill(); }
 function drawCage(x, y) {
   ctx.save(); ctx.translate(x, y);
   ctx.strokeStyle = '#c8ccd4'; ctx.lineWidth = 3;
@@ -1047,7 +1078,7 @@ function drawLighting() {
     lx.fillStyle = g; lx.fillRect(x - r, y - r, r * 2, r * 2);
   };
   for (const l of lights) {
-    if (l.cone === true) { hole(l.x, GROUND + 10, 150, l.a * .9); hole(l.x, l.y + 60, l.r * .7, l.a * .6); }
+    if (l.cone === true) { hole(l.x, BACK + 60, 170, l.a * .9); hole(l.x, l.y + 60, l.r * .7, l.a * .6); }
     else if (l.cone) {
       const g = lx.createRadialGradient(l.x, l.y, 0, l.x, l.y, 220);
       g.addColorStop(0, `rgba(0,0,0,${l.a})`); g.addColorStop(1, 'rgba(0,0,0,0)');
@@ -1063,22 +1094,42 @@ function drawLighting() {
     g.addColorStop(0, l.col || 'rgba(255,220,140,.4)'); g.addColorStop(1, 'rgba(255,220,140,0)');
     ctx.fillStyle = g; ctx.fillRect(l.x - r, l.y - r, r * 2, r * 2);
     if (l.cone === true) {
-      const cg = ctx.createLinearGradient(0, l.y, 0, GROUND);
+      const cg = ctx.createLinearGradient(0, l.y, 0, BACK + 100);
       cg.addColorStop(0, 'rgba(255,220,140,.14)'); cg.addColorStop(1, 'rgba(255,220,140,.02)');
-      ctx.fillStyle = cg; ctx.beginPath(); ctx.moveTo(l.x - 8, l.y); ctx.lineTo(l.x + 8, l.y); ctx.lineTo(l.x + 90, GROUND + 20); ctx.lineTo(l.x - 90, GROUND + 20); ctx.fill();
+      ctx.fillStyle = cg; ctx.beginPath(); ctx.moveTo(l.x - 8, l.y); ctx.lineTo(l.x + 8, l.y); ctx.lineTo(l.x + 110, BACK + 100); ctx.lineTo(l.x - 110, BACK + 100); ctx.fill();
     }
   }
   ctx.globalCompositeOperation = 'source-over';
 }
 
-function drawWorld(cam) {
+function drawWorld(cam, actors) {
   lights = [];
   drawSky(cam); drawFar(cam); drawGround(cam);
   for (const l of lots) drawHouse(l.house, cam);
   for (const l of lots) { if (l.tree) drawTree(l.tree, cam); if (l.hedge) drawHedge(l.hedge, cam); if (l.fence) drawFence(l.fence, cam); if (l.car) drawCar(l.car, cam); if (l.lamp) drawLamp(l.lamp, cam); }
-  for (const b of bins) drawBin(b, cam);
-  for (const j of junk) drawJunk(j, cam);
-  for (const l of lids) drawLid(l, cam);
+  const list = [];
+  for (const j of junk) if (j.x > cam - 20 && j.x < cam + W + 20) list.push([j.z - 30, () => drawJunk(j, cam)]);
+  for (const b of bins) list.push([b.z, () => drawBin(b, cam)]);
+  for (const l of lids) list.push([l.z + .5, () => drawLid(l, cam)]);
+  if (actors) {
+    for (const h of humans) list.push([h.z + .2, () => drawHuman(h, cam)]);
+    for (const v of vans) list.push([H, () => drawVan(v, cam)]);
+    list.push([P.z + .1, () => drawPlayer(cam)]);
+  }
+  list.sort((a, b) => a[0] - b[0]);
+  for (const e of list) e[1]();
+}
+function drawPlayer(cam) {
+  const sx = P.x - cam;
+  shadow(sx, P.z - P.sup, 22 * (1 - Math.min(.5, (P.h - P.sup) / 300)), .4);
+  const flicker = P.inv > 0 && Math.floor(T * 20) % 2;
+  if (!flicker) {
+    if (P.pw.ninja > 0) ctx.globalAlpha = .45;
+    drawRaccoon(sx, P.y, P.face, { run: clamp(Math.hypot(P.vx, P.vz) / CFG.run, 0, 1.3), anim: P.anim, air: !P.onGround && mode === 'play', squash: P.squash, rum: !!P.rum, crown: G.rank === RANKS.length - 1, ninja: P.pw.ninja > 0 });
+    ctx.globalAlpha = 1;
+  }
+  if (P.butter) { ctx.fillStyle = `rgba(255,230,120,${.15 + .1 * Math.sin(T * 6)})`; ell(sx, P.y - 20, 34, 26); ctx.fill(); }
+  if (mode === 'caught') drawCage(sx, C.cageY);
 }
 
 // ----- item icons (for loot popups and the HUD)
@@ -1141,19 +1192,8 @@ function drawPlay() {
   const cam = G.cam + (G.shake > .3 ? rand(-G.shake, G.shake) : 0);
   ctx.save();
   if (G.shake > .3) ctx.translate(0, rand(-G.shake, G.shake) * .6);
-  drawWorld(cam);
-  for (const v of vans) drawVan(v, cam);
-  for (const h of humans) drawHuman(h, cam);
-  // raccoon
-  const flicker = P.inv > 0 && Math.floor(T * 20) % 2;
-  if (!flicker) {
-    if (P.pw.ninja > 0) ctx.globalAlpha = .45;
-    drawRaccoon(P.x - cam, P.y, P.face, { run: clamp(Math.abs(P.vx) / CFG.run, 0, 1.3), anim: P.anim, air: !P.onGround && mode === 'play', squash: P.squash, rum: !!P.rum, crown: G.rank === RANKS.length - 1, ninja: P.pw.ninja > 0 });
-    ctx.globalAlpha = 1;
-  }
+  drawWorld(cam, true);
   if (P.pw.stink > 0 && Math.random() < .3) parts.push({ x: P.x + rand(-20, 20), y: P.y - rand(10, 40), vx: rand(-10, 10), vy: -20, life: .8, t: 0, r: rand(5, 9), col: 'rgba(150,200,60,.35)', k: 'puff' });
-  if (P.butter) { ctx.fillStyle = `rgba(255,230,120,${.15 + .1 * Math.sin(T * 6)})`; ell(P.x - cam, P.y - 20, 34, 26); ctx.fill(); }
-  if (mode === 'caught') drawCage(P.x - cam, C.cageY);
   for (const p of parts) {
     const k = 1 - p.t / p.life;
     ctx.globalAlpha = k; ctx.fillStyle = p.col; ell(p.x - cam, p.y, p.r * (p.k === 'puff' ? 2 - k : 1), p.r * (p.k === 'puff' ? 2 - k : 1)); ctx.fill();
@@ -1182,7 +1222,8 @@ function drawPlay() {
   }
   if (G.hint > 0 && mode === 'play') {
     ctx.globalAlpha = clamp(G.hint, 0, 1);
-    text('Run into the bins to knock them over!', W / 2, 120, 26, '#fff');
+    text('Line up with a bin and run into it!', W / 2, 112, 26, '#fff');
+    text('↑ ↓ to dodge the humans', W / 2, 140, 20, '#cfe');
     ctx.globalAlpha = 1;
   }
   if (mode === 'caught' && C.t > 1.7) { ctx.fillStyle = `rgba(0,0,0,${clamp((C.t - 1.7) / .7, 0, 1)})`; ctx.fillRect(0, 0, W, H); }
@@ -1309,7 +1350,7 @@ function drawTitle() {
   // a slowly panning street in the background
   if (!G) resetWorld();
   G.cam = titleCam; ensureWorld();
-  drawWorld(titleCam);
+  drawWorld(titleCam, false);
   drawLighting();
   ctx.fillStyle = 'rgba(5,6,20,.45)'; ctx.fillRect(0, 0, W, H);
   // raccoon face peeking over a giant bin
@@ -1405,14 +1446,18 @@ function drawEnding() {
 // ---------------------------------------------------------------- auto-play (for testing: index.html?auto)
 function autoPilot() {
   if (mode === 'title') { startGame(); return; }
-  if (mode !== 'play') { keys.right = false; return; }
-  keys.right = !P.rum; keys.left = false; keys.jump = false;
-  const ahead = humans.find(h => h.st !== 'stun' && h.st !== 'home' && (h.x - P.x) * 1 > -20 && h.x - P.x < 150);
-  if (ahead && P.onGround) { pressed.jump = true; keys.jump = true; }
-  else if (P.onGround && Math.random() < .01) { pressed.jump = true; keys.jump = true; }
-  const near = bins.find(b => b.st === 'down' && !b.done && Math.abs(P.x - (binMouth(b).x + b.dir * 14)) < 40);
-  const threat = humans.some(h => Math.abs(h.x - P.x) < 260 && h.st === 'chase');
-  if (near && !threat && P.onGround) pressed.down = true;
+  for (const k of ['left', 'right', 'up', 'down', 'jump']) keys[k] = false;
+  if (mode !== 'play') return;
+  keys.right = !P.rum;
+  // line up with the next standing bin, but sidestep any human close by
+  const bin = bins.filter(b => b.st === 'up' && b.x > P.x + 20 && b.x < P.x + 400).sort((a, b) => a.x - b.x)[0];
+  const foe = humans.filter(h => h.st !== 'stun' && h.st !== 'home' && h.st !== 'patrol' && Math.abs(h.x - P.x) < 180).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0];
+  let tz = bin ? bin.z : P.z;
+  if (foe) tz = foe.z > (ZMIN + ZMAX) / 2 ? ZMIN : ZMAX;
+  if (tz < P.z - 6) keys.up = true; else if (tz > P.z + 6) keys.down = true;
+  if (foe && Math.abs(foe.x - P.x) < 90 && Math.abs(foe.z - P.z) < 20 && P.onGround) { pressed.jump = true; keys.jump = true; }
+  const near = bins.find(b => b.st === 'down' && !b.done && Math.abs(P.x - (binMouth(b).x + b.dir * 14)) < 40 && Math.abs(P.z - b.z) < 16);
+  if (near && !foe && P.onGround) pressed.act = true;
 }
 
 // ---------------------------------------------------------------- loop
