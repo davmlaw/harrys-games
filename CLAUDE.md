@@ -103,8 +103,8 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - **Modes**: `title` → `play` → `caught` (cage drops) → `ending` (mugshot, stripes poof on, bars slam, `#endUI` card).
   Night lighting is an offscreen dark layer with holes cut for lamps/windows/torches (`drawLighting`).
 - **Testing**: `index.html?auto` plays itself (runs right, jumps humans, rummages); `?shot=end` jumps to the ending;
-  `?shot=title` holds the title; `?mobile` forces mobile mode. `share.png` (link preview, 1200×630) and `icon-*.png` are rendered from
-  `?mobile&shot=share` (1200×675 window, centre-cropped) and `?mobile&shot=icon` (960×540, centre 540² crop); regenerate if the art changes. These use a timer loop so headless `--virtual-time-budget` screenshots advance.
+  `?shot=title` holds the title; `?mobile` forces mobile mode. `share.png` (link preview, 1200×630) is rendered from `?mobile&shot=share`
+  (1200×675 window, centre-cropped); regenerate it if the title art changes. These use a timer loop so headless `--virtual-time-budget` screenshots advance.
 
 ### food_wars2 (`index.html`)
 
