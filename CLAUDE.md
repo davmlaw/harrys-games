@@ -20,6 +20,15 @@ The games are independent and share no code.
   knocks over metal bins, rummages for loot and dodges humans. Split into `index.html`, `style.css`, `game.js`.
   Harry's spec is `1_game_design.txt`.
 
+## Working with Harry
+
+- These sessions are often driven by Harry himself (age 8). Keep replies short, friendly and in plain words a
+  kid can follow; avoid jargon and long technical explanations.
+- **Commit every version of a game**: one commit per round of feedback, as soon as it works, before starting the
+  next round. Work on a feature branch (not `main`).
+- **"Push to the site", "update the site", "put it online so I can play" etc. means push to `main`** (merge the
+  branch into `main` and push), so GitHub Pages redeploys the live site.
+
 ## Running
 
 Open a game's `index.html` directly in a browser, or serve the repo root and browse to `/<game>/`:
