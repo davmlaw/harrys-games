@@ -123,6 +123,8 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - `ITEMS` is the upgrade ladder (`x` factor, `cost`); per-click = product of every bought `x` (`perClick()`).
   Costs are tuned so each step takes ~50–110 clicks if bought in order; the last item is the `final` win.
 - State `G` (cookies, `got`, clicks, muted) saves to `localStorage` (`megaCookie1`). Sounds are Web Audio (`crunch`, `tone`).
+- **Mobile**: CSS-only (`max-width:820px` portrait and `max-height:520px` landscape): the page fits the screen and only
+  the shop list scrolls. The shop lists the Golden Cookie first, then unbought items, then bought ones (`renderShop`).
 - `?shot=N` loads N cookies with the first four upgrades bought (for screenshots).
 
 ### food_wars2 (`index.html`)

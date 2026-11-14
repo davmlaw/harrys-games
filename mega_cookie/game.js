@@ -73,9 +73,11 @@ const sWin  = () => [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => 
 const countEl = $('count'), multEl = $('mult'), itemsEl = $('items');
 function renderShop(){
   itemsEl.innerHTML = '';
-  const order = ITEMS.filter(it => !it.final);
-  // the Golden Cookie goal sits at the top so you always know what you're aiming for
-  for (const it of [ITEMS[ITEMS.length - 1], ...order]) {
+  // the Golden Cookie goal sits at the top so you always know what you're aiming for,
+  // then the ones you still need, and the ones you've already got go to the bottom
+  const rest = ITEMS.filter(it => !it.final);
+  const order = [ITEMS[ITEMS.length - 1], ...rest.filter(it => !G.got[it.id]), ...rest.filter(it => G.got[it.id])];
+  for (const it of order) {
     const li = document.createElement('li');
     li.className = 'item' + (it.final ? ' final' : '');
     li.dataset.id = it.id;
@@ -163,8 +165,8 @@ function buy(it, li){
     sNope(); li.classList.remove('shake'); void li.offsetWidth; li.classList.add('shake'); return;
   }
   G.cookies -= it.cost; G.got[it.id] = true; save();
-  multEl.parentElement.classList.remove('pop'); void multEl.offsetWidth; multEl.parentElement.classList.add('pop');
-  update();
+  const m = document.querySelector('.mult'); m.classList.remove('pop'); void m.offsetWidth; m.classList.add('pop');
+  renderShop();
   if (it.final) {
     sWin(); confetti(); setTimeout(confetti, 700);
     $('winPer').textContent = fmt(perClick()); $('win').hidden = false;
@@ -179,7 +181,7 @@ muteBtn.addEventListener('click', () => { G.muted = !G.muted; showMute(); save()
 $('reset').addEventListener('click', () => {
   if (!confirm('Start again from 0 cookies?')) return;
   G = {cookies:0, got:{}, clicks:0, muted:G.muted}; save();
-  $('hint').classList.remove('gone'); update();
+  $('hint').classList.remove('gone'); renderShop();
 });
 
 // ?shot=N gives N cookies and the first upgrades (for screenshots)
