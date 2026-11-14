@@ -22,7 +22,7 @@ The games are independent and share no code.
 
 ## Working with Harry
 
-- These sessions are often driven by Harry himself (age 8). Keep replies short, friendly and in plain words a
+- These sessions are often driven by Harry himself (age 9). Keep replies short, friendly and in plain words a
   kid can follow; avoid jargon and long technical explanations.
 - **Commit every version of a game**: one commit per round of feedback, as soon as it works, before starting the
   next round. Work on a feature branch (not `main`).
