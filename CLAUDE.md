@@ -16,6 +16,9 @@ The games are independent and share no code.
 - `survive_the_night/` — "Survive the Night" (started November 2026), a blocky side-scrolling choose-your-own-adventure:
   build a base, then survive as many nights as you can. Split into `index.html`, `style.css`, `game.js`. Harry's spec is
   `1_game_design.txt` plus his sketch `design_sketch.jpg`.
+- `king_of_the_bins/` — "King of the Bins" (started November 2026), a night-time side-scrolling platformer: a raccoon
+  knocks over metal bins, rummages for loot and dodges humans. Split into `index.html`, `style.css`, `game.js`.
+  Harry's spec is `1_game_design.txt`.
 
 ## Running
 
@@ -76,6 +79,23 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - **Testing**: `index.html?auto=y,2,2,1` plays itself, answering each question in turn (y/n or menu number;
   falls back to option 1 when the list runs out). It ticks on a timer so headless Chromium
   `--virtual-time-budget` screenshots advance. Results vary run to run (random friends/loot/armour).
+
+### king_of_the_bins (`game.js`)
+
+- **Endless street** generated in lots (`genLot`): each lot has a house (resident `dad`/`mum`/`granny`), maybe a
+  porch roof, fence, car, tree, lamp, and 1–3 bins. `plats` are one-way platforms (land from above, ↓ drops through);
+  upright bins add their lids as platforms in `allPlats()`. `ensureWorld` generates ahead and prunes behind the camera.
+- **Bin physics**: touching an upright bin calls `knock()`: the bin pivots on its bottom corner (`ang`/`av`) until it
+  lies flat, the lid flies off (`lids`, ends in a wobble), and rubbish spills from `binMouth()` into `junk`
+  (bouncing particles the raccoon kicks around). Fallen bins are rummaged once (↓) for a roll on `LOOT_TABLE`.
+- **Humans**: knocking a bin `wake()`s the nearest sleeping house → lights on → door opens → human chases with a
+  timer and gives up (`st` = `out`/`chase`/`stun`/`search`/`flee`/`swing`/`home`). Stomp their heads to stun them;
+  flying lids and falling bins stun them too. Every few bins (`G.nextVan`) an Animal Control van brings a faster
+  `catcher` with a net. Touch (or net) = `caught()` unless Stinky Cheese / Butter Fur / Ninja Mask saves you.
+- **Modes**: `title` → `play` → `caught` (cage drops) → `ending` (mugshot, stripes poof on, bars slam, `#endUI` card).
+  Night lighting is an offscreen dark layer with holes cut for lamps/windows/torches (`drawLighting`).
+- **Testing**: `index.html?auto` plays itself (runs right, jumps humans, rummages); `?shot=end` jumps to the ending;
+  `?shot=title` holds the title. These use a timer loop so headless `--virtual-time-budget` screenshots advance.
 
 ### food_wars2 (`index.html`)
 

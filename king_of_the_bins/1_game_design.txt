@@ -1,0 +1,15 @@
+King of the Bins — Harry's design (November 2026, as told to Claude)
+
+Okay, so we want to make a new game that is basically a side-scroller, like sort of Mario style, except the main
+character is a raccoon. And it's called King of the Bins. And basically you jump around a suburban neighborhood full
+of old-style metal bins in a dark night, suburbs and stuff. And you run around knocking over bins. So I guess if you
+run into a bin, it knocks it over, like, I guess, a physics simulator style with the lids flying off and all the
+rubbish being strewn everywhere. And you can run around and then rummage through the rubbish bins and trash bins and
+get treasure or food and power-ups and stuff. And then humans will try and catch you. And if they'll put you in a cage
+and take you away, and that's how you lose the game.
+
+So it should look — the title screen should have a picture of a raccoon's face on it, and he kind of looks like a
+baddie, like he looks maybe he should be put in like a prison. Like he looks like a bandit, because raccoons are
+bandits. At the end he gets put in like white stripes: you see the raccoon's face and then you see him get suddenly
+put in the old style white stripe cartoon prisoner's outfit, and then slammed bars appear on him, and that's the end
+you get when you get caught.

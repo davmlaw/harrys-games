@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>King of the Bins</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@700;900&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <a href="../index.html" class="back">← Harry's Games</a>
+    <h1>King of the Bins</h1>
+    <button id="mute" title="Sound on/off (M)">🔊</button>
+  </header>
+
+  <div id="stage">
+    <canvas id="cv" width="960" height="540"></canvas>
+
+    <div id="titleUI" class="ui">
+      <button id="playBtn" class="big">PLAY!</button>
+    </div>
+
+    <div id="endUI" class="ui" hidden>
+      <div class="card">
+        <h2>BUSTED!</h2>
+        <div id="endStats"></div>
+        <button id="againBtn" class="big">PLAY AGAIN</button>
+      </div>
+    </div>
+
+    <div id="touch" aria-hidden="true">
+      <div class="pad">
+        <button data-k="left">◀</button><button data-k="right">▶</button>
+      </div>
+      <div class="pad">
+        <button data-k="down">🔍</button><button data-k="jump">⤒</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="help">
+    <span><kbd>←</kbd><kbd>→</kbd> run</span>
+    <span><kbd>Space</kbd> jump</span>
+    <span><kbd>↓</kbd> rummage</span>
+    <span>Bump bins to knock them over · Jump on humans' heads · Don't get caged!</span>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
