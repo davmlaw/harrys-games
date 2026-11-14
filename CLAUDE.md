@@ -19,8 +19,8 @@ The games are independent and share no code.
 - `king_of_the_bins/` — "King of the Bins" (started November 2026), a night-time side-scrolling platformer: a raccoon
   knocks over metal bins, rummages for loot and dodges humans. Split into `index.html`, `style.css`, `game.js`.
   Harry's spec is `1_game_design.txt`.
-- `mega_cookie/` — "Mega Cookie" (started November 2026), a cookie clicker: click the cookie, buy upgrades that
-  multiply cookies per click, aim for THE GOLDEN COOKIE (x100 million, costs 1 trillion). Split into `index.html`,
+- `mega_cookie/` — "Mega Cookie" (started November 2026), a cookie clicker: click the cookie, buy items (each
+  many times) that bake cookies every second, aim for THE GOLDEN COOKIE (+100 million per click, costs 1 trillion). Split into `index.html`,
   `style.css`, `game.js`. Harry asked for "Cookie Clicker" but that's an existing game's name, so it's called Mega Cookie.
 
 ## Working with Harry
@@ -120,12 +120,14 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 
 ### mega_cookie (`game.js`)
 
-- `ITEMS` is the upgrade ladder (`x` factor, `cost`); per-click = product of every bought `x` (`perClick()`).
-  Costs are tuned so each step takes ~50–110 clicks if bought in order; the last item is the `final` win.
-- State `G` (cookies, `got`, clicks, muted) saves to `localStorage` (`megaCookie1`). Sounds are Web Audio (`crunch`, `tone`).
+- `ITEMS` is the shop: each item has a base `cost` and adds `ps` cookies/second (Golden Cookie adds `pc` per click).
+  Items can be bought many times; `price()` grows by `PRICE_UP` (15%) per one owned. Harry wants plus, not times.
+  Tuned so a good player reaches 1 trillion in about an hour. `loop()` adds `perSec()` each frame; a hidden tab
+  catches up (max 1 hour) on return.
+- State `G` (cookies, `n` = owned counts, clicks, muted, won) saves to `localStorage` (`megaCookie2`). Sounds are Web Audio (`crunch`, `tone`).
 - **Mobile**: CSS-only (`max-width:820px` portrait and `max-height:520px` landscape): the page fits the screen and only
-  the shop list scrolls. The shop lists the Golden Cookie first, then unbought items, then bought ones (`renderShop`).
-- `?shot=N` loads N cookies with the first four upgrades bought (for screenshots).
+  the shop list scrolls. The shop lists the Golden Cookie first, then the items in price order (`renderShop`).
+- `?shot=N` loads N cookies with a few items owned (for screenshots).
 
 ### food_wars2 (`index.html`)
 

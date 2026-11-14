@@ -79,15 +79,16 @@ body.golden .rays{background:repeating-conic-gradient(rgba(255,240,120,.8) 0 10d
 .item.can:hover{background:#d2ffec}
 .item.can .cost{color:#0c7a50}
 .item.can .cost::after{content:"  ← BUY!";color:var(--berry)}
+.item .own{position:absolute;top:4px;left:4px;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--sky);color:#fff;
+  border:2px solid var(--ink);font-weight:900;font-size:.75rem;display:grid;place-items:center;line-height:1}
+.item .own:empty{display:none}
+.item .fac small{display:block;font-family:var(--body);font-size:.7rem;-webkit-text-stroke:0;color:#6b4c3a;font-weight:800;letter-spacing:0}
+.item.bought{animation:pop .4s}
 @keyframes wiggle{0%,100%{transform:rotate(0)}50%{transform:rotate(-.8deg)}}
 .item.no{opacity:.72}
-.item.got{background:#f3ece3;opacity:.6}
-.item.got .cost::after{content:"✔ got it!";color:#0c7a50}
-.item.got .cost span{display:none}
 .item.final{border-width:4px;background:linear-gradient(135deg,#fff7c2,#ffe066)}
 .item.final .nm{font-size:1.2rem}
 .item.final.no{opacity:1}
-.item.final.got{opacity:1}
 .item.shake{animation:shake .3s}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 
