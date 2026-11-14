@@ -64,6 +64,7 @@ kbd {
 
 /* ---------- mobile mode: only on phones/tablets (body.touch); desktop is unchanged ---------- */
 #touch, #mbar, #rotate { display: none; }
+body.snap #titleUI, body.snap #mbar, body.snap #touch { display: none !important; }
 body.touch.playing #touch { display: block; }
 #touch { position: absolute; inset: 0; pointer-events: none; touch-action: none; }
 /* touch anywhere on the left half: the joystick appears under your thumb. Very faint so you can see through it. */

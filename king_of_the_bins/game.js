@@ -1520,10 +1520,21 @@ function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (AUTO) autoPilot();
   update(dt);
-  if (mode === 'title') drawTitle();
+  if (SHOT === 'icon') drawIcon();
+  else if (mode === 'title') drawTitle();
   else if (mode === 'ending') drawEnding();
   else drawPlay();
 }
+// ?shot=icon draws the app/tab icon; ?shot=share hides the buttons for the link-preview picture
+function drawIcon() {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const x0 = W / 2 - H / 2, g = ctx.createRadialGradient(W / 2, H * .45, 40, W / 2, H / 2, H * .75);
+  g.addColorStop(0, '#3a3f8a'); g.addColorStop(1, '#0b0e24');
+  ctx.fillStyle = g; ctx.fillRect(x0, 0, H, H);
+  ctx.fillStyle = '#fff4c8'; ell(x0 + H * .8, H * .2, 46, 46); ctx.fill();
+  drawFace(W / 2, 318, 1.55, { crown: true, look: 1 });
+}
+if (SHOT === 'icon' || SHOT === 'share') document.body.classList.add('snap');
 if (SHOT === 'end') {
   resetWorld(); G.score = 1234; G.knocked = 17; G.rank = rankIdx(17); G.causeOfCapture = 'a grumpy dad in his dressing gown';
   startEnding(); document.getElementById('titleUI').hidden = true;
