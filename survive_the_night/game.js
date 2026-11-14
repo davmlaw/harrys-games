@@ -29,9 +29,13 @@ const SPOTS = [
   { c: 80, tree: 87, text: 'The top of a hill. You can see for miles!' },
 ];
 const TREE_COLS = [2, 22, 28, 46, 55, 62, 87, 95, 102];
-const MAX_ROOMS = 2, ROOM_COST = 4, STONE_WALL_COST = 6;
+const MAX_ROOMS = 2, ROOM_COST = 4, REBUILD_WOOD = 10, REBUILD_STONE = 5;
 const AXES = ['stone axe', 'iron axe', 'crystal axe'];
-const SWORDS = ['wooden sword', 'iron sword', 'crystal sword'];
+const SWORDS = ['wooden sword', 'stone sword', 'iron sword', 'crystal sword'];
+// Baddies get tougher: their armour goes up a level every 2 nights. Your sword must be at least as strong.
+const ARMOURS = [null, 'stone armour', 'iron armour', 'crystal armour'];
+const ARMOUR_COL = [null, ['#8e8e96', '#b4b4bc'], ['#c4c9d0', '#f2f4f8'], ['#2ec4d0', '#9ff8fa']];
+const armourFor = night => Math.min(3, Math.floor((night - 1) / 2));
 const FRIEND_NAMES = ['Sam', 'Ava', 'Leo', 'Mia', 'Max', 'Zoe', 'Finn', 'Ruby'];
 const FRIEND_LOOKS = [
   { shirt: '#3d9b4a', shirtD: '#2b7336', hair: '#e2b33c', band: '#ffffff' },
@@ -42,9 +46,10 @@ const FRIEND_LOOKS = [
 
 const DEATHS = {
   clink:     { emoji: '🪓', title: 'Clink!', text: "Axes can't hurt baddies! You need a sword." },
-  snap:      { emoji: '🛡️', title: 'Snap!', text: 'Your wooden sword broke on his armour. You need a stronger sword for armoured baddies.' },
+  snap:      { emoji: '🛡️', title: 'Snap!', text: "Your sword wasn't strong enough for his armour. Baddies get tougher every night, so keep upgrading your sword!" },
   kaboom:    { emoji: '💥', title: 'Kaboom!', text: 'You stayed in the middle of the room... but the bombs blew up the base.' },
   frontdoor: { emoji: '🚪', title: 'Wrong Door', text: 'You ran out the front door, right into the baddie.' },
+  nobase:    { emoji: '🏚️', title: 'Nowhere to Hide', text: 'With no base and nowhere to hide, the baddie got you. Rebuild your base as soon as you can!' },
 };
 
 // ---------- helpers ----------
@@ -103,15 +108,15 @@ const SFX = {
 let S, G, hero, baddie;
 function mkActor(kind, x, look) {
   return { kind, x, y: groundAt(x), dir: 1, walking: false, walkT: 0, arm: 0, item: null, angle: 0, dead: false,
-           visible: true, alpha: 1, flash: 0, free: false, hopY: 0, look: look || null, armour: false };
+           visible: true, alpha: 1, flash: 0, free: false, hopY: 0, look: look || null, armour: 0, evil: false };
 }
 function resetWorld() {
   S = { tod: 0, time: 0, cam: { x: 0, y: 0, shake: 0, focus: null, focusY: null }, trees: [], base: null, bombs: [],
-        parts: [], dug: new Set(), escape: [], flash: 0, bubbles: [], chest: null };
+        parts: [], dug: new Set(), escape: [], flash: 0, bubbles: [], chest: null, strangers: [] };
   for (const c of TREE_COLS) S.trees.push({ c, h: 4 + (c % 2), angle: 0, gone: false, shake: 0 });
-  G = { night: 0, day: 0, wood: 0, stone: 0, axe: 0, sword: -1, mine: 0, mineLen: 0, friends: [], spot: null, phase: 'day', left: 0, met: 0 };
+  G = { night: 0, day: 0, wood: 0, stone: 0, axe: 0, sword: -1, mine: 0, mineLen: 0, friends: [], rejected: [], spot: null, phase: 'day', left: 0, met: 0 };
   hero = mkActor('hero', 1.5 * B); hero.item = 'axe0';
-  baddie = mkActor('baddie', 0); baddie.visible = false; baddie.dir = -1; baddie.item = 'knife';
+  baddie = mkActor('baddie', 0); baddie.visible = false; baddie.dir = -1; baddie.item = 'knife'; baddie.armour = 0;
   tasks = [];
 }
 const people = () => [hero, ...G.friends];
@@ -194,9 +199,11 @@ addEventListener('keydown', e => {
 // ---------- the base ----------
 // Main room: cols s..s+4 (walls at s and s+4, door in s+4). Extra room k: cols s-4k..s-4k+3, to the left.
 // The mine shaft goes down at col s+3 and its tunnel runs right, 4–5 blocks under the base floor.
-function makeBase(s) { return { s, g: gh(s), rooms: 0, stone: false, mainGone: false, cells: [], back: 0, door: 'none', furnish: false }; }
+function makeBase(s) { return { s, g: gh(s), rooms: 0, gone: false, cells: [], back: 0, door: 'none', furnish: false }; }
+const leftWall = () => S.base.s - 4 * S.base.rooms;
 function wantedCells(b) {
-  const out = new Map(), s = b.s, g = b.g, wall = b.stone ? 'cobble' : 'plank';
+  const out = new Map(), s = b.s, g = b.g, wall = 'plank';
+  if (b.gone) return out;
   const add = (c, r, k) => out.set(c + ',' + r, { c, r, k });
   for (let k = 1; k <= b.rooms; k++) {
     const x0 = s - 4 * k;
@@ -204,7 +211,7 @@ function wantedCells(b) {
     for (let c = x0 - 1; c <= x0 + 3; c++) add(c, g - 5, 'roof');
     for (let c = x0; c <= x0 + 3; c++) add(c, g - 6, 'roof');
   }
-  if (!b.mainGone) {
+  {
     for (let r = g - 1; r >= g - 4; r--) { if (b.rooms === 0 || r <= g - 3) add(s, r, wall); if (r <= g - 3) add(s + 4, r, wall); }
     for (let c = s - 1; c <= s + 5; c++) add(c, g - 5, 'roof');
     for (let c = s; c <= s + 4; c++) add(c, g - 6, 'roof');
@@ -234,12 +241,17 @@ const doorX = () => (S.base.s + 4.5) * B;
 const insideX = () => (S.base.s + 2.5) * B;
 const outsideX = () => (S.base.s + 5.5) * B;
 const frontX = () => (S.base.s + 5) * B;
-const backRoomX = () => (S.base.s - 1.5) * B;
 const shaftX = () => (S.base.s + 3.5) * B;
 const FRIEND_SLOTS = [1.3, 3.6, 1.9];
 const friendHomeX = i => (S.base.s + FRIEND_SLOTS[i]) * B;
-async function goOut(a = hero) { S.base.door = 'open'; SFX.door(); await walkTo(a, outsideX(), 170); S.base.door = 'closed'; SFX.door(); }
-async function goIn(a = hero, x = insideX()) { S.base.door = 'open'; SFX.door(); await walkTo(a, x, 190); S.base.door = 'closed'; SFX.door(); }
+async function goOut(a = hero) {
+  if (S.base.gone) return walkTo(a, outsideX(), 170);
+  S.base.door = 'open'; SFX.door(); await walkTo(a, outsideX(), 170); S.base.door = 'closed'; SFX.door();
+}
+async function goIn(a = hero, x = insideX()) {
+  if (S.base.gone) return walkTo(a, x, 190);
+  S.base.door = 'open'; SFX.door(); await walkTo(a, x, 190); S.base.door = 'closed'; SFX.door();
+}
 
 function placeEveryoneInside() {
   hero.x = insideX(); hero.y = groundAt(hero.x); hero.dir = 1; hero.free = false;
@@ -253,14 +265,12 @@ async function explode(b) {
   S.bombs = []; S.flash = 1; shake(18); SFX.boom();
   burst(bx, by, 40, ['#ffd84a', '#ff8a2a', '#ff4b2a', '#fff'], { speed: 320, grav: 100, life: 0.7, size: 8 });
   for (let i = 0; i < 25; i++) setTimeout(() => S && burst(bx - 60 + Math.random() * 150, by - Math.random() * 90, 1, ['#555', '#777', '#444'], { speed: 30, grav: -40, life: 2, size: 18 }), i * 40);
-  if (b.stone) return; // stone walls hold!
-  for (const cl of b.cells) {
-    if (cl.c < b.s - 1 || (cl.c === b.s - 1 && b.rooms)) continue; // extra rooms survive
+  for (const cl of b.cells) { // the WHOLE base blows up, every room
     const x = (cl.c + 0.5) * B, y = (cl.r + 0.5) * B, ang = Math.atan2(y - by, x - bx), sp = 250 + Math.random() * 300;
     S.parts.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 200, size: 14, color: cl.k === 'roof' ? '#a23b2c' : '#b98a4c',
       life: 1.4 + Math.random(), grav: 700, spin: (Math.random() - 0.5) * 12 });
   }
-  b.mainGone = true; b.door = 'none'; syncCells(b, true);
+  b.gone = true; b.door = 'none'; b.furnish = false; b.back = 0; syncCells(b, true);
 }
 
 // ---------- update ----------
@@ -269,7 +279,7 @@ function snapCam() { S.cam.x = clamp(hero.x - VW / 2, 0, WORLD - VW); S.cam.y = 
 function update(dt) {
   S.time += dt;
   for (const t of tasks.slice()) if (t.fn(dt)) { tasks.splice(tasks.indexOf(t), 1); t.res(); }
-  for (const a of [hero, baddie, ...G.friends]) {
+  for (const a of [hero, baddie, ...G.friends, ...S.strangers]) {
     if (a.walking) a.walkT += dt;
     if (!a.free) { const gy = groundAt(a.x); a.y += (gy - a.y) * Math.min(1, dt * 14); }
     a.flash = Math.max(0, a.flash - dt);
@@ -355,19 +365,23 @@ function drawTree(t) {
 function drawBase() {
   const b = S.base; if (!b) return;
   const s = b.s, g = b.g;
-  if (b.mainGone) { ctx.fillStyle = '#2a2420'; ctx.fillRect((s - (b.rooms ? 0 : 1)) * B, g * B - 4, (b.rooms ? 6 : 7) * B, 6); }
+  if (b.gone) { // rubble
+    const x0 = b.rubbleFrom ?? s - 1;
+    ctx.fillStyle = '#2a2420'; ctx.fillRect(x0 * B, g * B - 4, (s + 6 - x0) * B, 6);
+    for (let c = x0; c < s + 6; c++) if (hsh(c, 3) > 0.45) { ctx.fillStyle = hsh(c, 4) > 0.5 ? '#946a33' : '#7d2a1f'; ctx.fillRect(c * B + hsh(c, 5) * 14, g * B - 10, 12, 8); }
+  }
   if (b.back > 0) {
     ctx.globalAlpha = b.back;
     const cols = [];
-    if (!b.mainGone) cols.push(s + 1, s + 2, s + 3);
+    cols.push(s + 1, s + 2, s + 3);
     for (let k = 1; k <= b.rooms; k++) cols.push(s - 4 * k + 1, s - 4 * k + 2, s - 4 * k + 3);
     for (const c of cols) for (let r = g - 4; r < g; r++) drawBlock(c * B, r * B, 'back', c, r);
-    if (b.rooms && !b.mainGone) for (let r = g - 2; r < g; r++) drawBlock(s * B, r * B, 'back', s, r);
+    if (b.rooms) for (let r = g - 2; r < g; r++) drawBlock(s * B, r * B, 'back', s, r);
     ctx.globalAlpha = 1;
   }
   if (b.furnish) {
-    const bedC = !b.mainGone && !G.mine ? s + 3 : b.rooms ? s - 2 : b.mainGone ? null : s + 1;
-    if (bedC !== null) {
+    const bedC = !G.mine ? s + 3 : b.rooms ? s - 2 : s + 1;
+    {
       const bx = bedC * B, by = g * B;
       ctx.fillStyle = '#6b4524'; ctx.fillRect(bx - 4, by - 12, 32, 12);
       ctx.fillStyle = '#c93a3a'; ctx.fillRect(bx - 4, by - 18, 32, 8);
@@ -380,7 +394,7 @@ function drawBase() {
     }
   }
   for (const cl of b.cells) if (cl.vis) drawBlock(cl.c * B, cl.r * B, cl.k, cl.c, cl.r);
-  if (b.door !== 'none' && !b.mainGone) {
+  if (b.door !== 'none' && !b.gone) {
     const dx = (s + 4) * B, dy = (g - 2) * B;
     ctx.fillStyle = '#6e4a22';
     if (b.door === 'closed') {
@@ -392,7 +406,8 @@ function drawBase() {
 }
 function torchXs(b) {
   const xs = [];
-  if (!b.mainGone) xs.push((b.s + 1.5) * B);
+  if (b.gone) return xs;
+  xs.push((b.s + 1.5) * B);
   for (let k = 1; k <= b.rooms; k++) xs.push((b.s - 4 * k + 2.5) * B);
   return xs;
 }
@@ -422,9 +437,9 @@ function drawItem(item) {
     ctx.fillStyle = ['#8a8a92', '#c4c9d0', '#2ec4d0'][tier]; ctx.fillRect(1.5, 12, 9, 11);
     ctx.fillStyle = ['#b4b4bc', '#f2f4f8', '#9ff8fa'][tier]; ctx.fillRect(8, 12, 3, 11);
   } else if (item.startsWith('sword')) {
-    const [edge, mid] = [['#7a5530', '#c89b5c'], ['#7d838c', '#e6e9ee'], ['#1f8f9c', '#7ff3f5']][tier];
+    const [edge, mid] = [['#7a5530', '#c89b5c'], ['#4d4d55', '#a0a0a8'], ['#7d838c', '#e6e9ee'], ['#1f8f9c', '#7ff3f5']][tier];
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(-1.5, -4, 3, 9);
-    ctx.fillStyle = tier === 2 ? '#7a4dff' : '#6b4524'; ctx.fillRect(-6, 5, 12, 4);
+    ctx.fillStyle = tier === 3 ? '#7a4dff' : '#6b4524'; ctx.fillRect(-6, 5, 12, 4);
     ctx.fillStyle = edge; ctx.fillRect(-3.5, 9, 7, 26);
     ctx.fillStyle = mid; ctx.fillRect(-2, 9, 4, 24); ctx.fillRect(-1, 33, 2, 4);
   } else if (item === 'knife') {
@@ -436,13 +451,15 @@ function drawItem(item) {
 const HERO_LOOK = { shirt: '#d6453d', shirtD: '#a83029', hair: '#6b3b1d', band: '#2e7dd7' };
 function drawActor(a, glowOnly) {
   if (!a.visible) return;
-  const bad = a.kind === 'baddie';
+  const bad = a.kind === 'baddie' && !a.look; // hooded baddie (a rejected survivor keeps their own look)
   const lh = bad ? 22 : 18, bh = bad ? 26 : 22, hd = bad ? 20 : 18, top = -(lh + bh + hd);
   ctx.save();
   ctx.translate(a.x, a.y + a.hopY); ctx.scale(a.dir, 1); ctx.rotate(a.angle);
   if (glowOnly) { // baddie's eyes glow in the dark, even when you can't see him
     ctx.shadowColor = '#ff2020'; ctx.shadowBlur = 12; ctx.fillStyle = '#ff4040';
-    ctx.fillRect(2, top + 8, 3, 7); ctx.fillRect(7, top + 8, 3, 7); ctx.restore(); return;
+    if (bad) { ctx.fillRect(2, top + 8, 3, 7); ctx.fillRect(7, top + 8, 3, 7); }
+    else { ctx.fillRect(2, top + 9, 2, 6); ctx.fillRect(6, top + 9, 2, 6); }
+    ctx.restore(); return;
   }
   ctx.globalAlpha = a.alpha;
   if (a.flash > 0 && 'filter' in ctx) ctx.filter = 'brightness(3)';
@@ -457,18 +474,21 @@ function drawActor(a, glowOnly) {
   ctx.fillStyle = shirt; ctx.fillRect(-9, -(lh + bh), 18, bh);
   if (!bad) { ctx.fillStyle = '#5a3a1a'; ctx.fillRect(-9, -lh - 5, 18, 4); }
   else { ctx.fillStyle = shirtD; ctx.fillRect(-9, -lh - 6, 18, 6); }
-  if (bad && a.armour) { ctx.fillStyle = '#9aa0a8'; ctx.fillRect(-10, -(lh + bh) + 2, 20, 14); ctx.fillStyle = '#c8ccd4'; ctx.fillRect(-10, -(lh + bh) + 2, 20, 3); }
+  const AC2 = a.armour ? ARMOUR_COL[a.armour] : null;
+  if (AC2) { ctx.fillStyle = AC2[0]; ctx.fillRect(-10, -(lh + bh) + 2, 20, 14); ctx.fillStyle = AC2[1]; ctx.fillRect(-10, -(lh + bh) + 2, 20, 3); }
   if (!bad) {
     ctx.fillStyle = '#f2c08a'; ctx.fillRect(-hd / 2, top, hd, hd);
     ctx.fillStyle = L.hair; ctx.fillRect(-hd / 2, top, hd, 5); ctx.fillRect(-hd / 2, top, 5, 12);
     ctx.fillStyle = L.band; ctx.fillRect(-hd / 2, top + 5, hd, 3);
     ctx.fillStyle = '#1a1220';
     if (a.dead) { for (let i = 0; i < 5; i++) { ctx.fillRect(2 + i, top + 9 + i, 1.5, 1.5); ctx.fillRect(6 - i, top + 9 + i, 1.5, 1.5); } }
+    else if (a.evil) { ctx.fillStyle = '#ff4040'; ctx.fillRect(2, top + 9, 2, 6); ctx.fillRect(6, top + 9, 2, 6); ctx.fillStyle = '#1a1220'; }
     else ctx.fillRect(4, top + 10, 3, 4);
     ctx.fillRect(3, top + 15, 5, 1.5);
+    if (AC2) { ctx.fillStyle = AC2[0]; ctx.fillRect(-hd / 2 - 1, top - 3, hd + 2, 6); }
   } else {
     ctx.fillStyle = '#2a173d'; ctx.fillRect(-hd / 2 - 1, top - 3, hd + 2, hd + 4);
-    if (a.armour) { ctx.fillStyle = '#9aa0a8'; ctx.fillRect(-hd / 2 - 2, top - 5, hd + 4, 7); }
+    if (AC2) { ctx.fillStyle = AC2[0]; ctx.fillRect(-hd / 2 - 2, top - 5, hd + 4, 7); }
     ctx.fillStyle = '#0b0610'; ctx.fillRect(-2, top + 4, hd / 2 + 2, hd - 6);
     ctx.fillStyle = '#ff4040'; ctx.fillRect(2, top + 8, 3, 7); ctx.fillRect(7, top + 8, 3, 7);
   }
@@ -541,7 +561,7 @@ function draw() {
   drawBase();
   drawBombs(); drawChest();
   drawActor(baddie);
-  for (const f of G.friends) drawActor(f);
+  for (const f of [...G.friends, ...S.strangers]) drawActor(f);
   drawActor(hero);
   for (const p of S.parts) {
     ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.color;
@@ -642,8 +662,13 @@ async function night() {
   S.cam.focus = () => frontX() + B;
   // the baddie is out there in the dark (you can only see his eyes)
   baddie.visible = true; baddie.alpha = 0; baddie.dead = false; baddie.angle = 0; baddie.arm = 0; baddie.dir = -1;
-  baddie.armour = G.night >= 5 || (G.night >= 3 && Math.random() < 0.5);
+  baddie.armour = armourFor(G.night);
+  baddie.evil = false; baddie.look = null; baddie.name = null;
+  if (G.rejected.length && Math.random() < 0.6) { // someone you wouldn't let join comes back for revenge
+    const p = G.rejected.shift(); baddie.evil = true; baddie.look = p.look; baddie.name = p.name;
+  }
   baddie.x = frontX() + 9 * B; baddie.y = groundAt(baddie.x);
+  if (S.base.gone) return noBaseNight();
   await narrate(`Night ${G.night}. It's dark and quiet...`);
   caption('...');
   await Promise.all([footsteps(5), walkTo(baddie, frontX() + 6 * B, 50)]);
@@ -661,9 +686,7 @@ async function goOutAndLook() {
   S.cam.focus = () => (hero.x + baddie.x) / 2;
   await walkTo(hero, outsideX() + B, 80);
   await wait(0.4);
-  await tween(baddie, 'alpha', 1, 0.8);
-  await say(baddie, 'Hehehe...', 1.2);
-  await narrate(`It's a BADDIE with a knife!${baddie.armour ? ' And he is wearing ARMOUR!' : ''}`);
+  await reveal();
   if (G.sword >= 0) hero.item = 'sword' + G.sword;
   const tree = S.trees.find(t => t.c === G.spot.tree);
   const opts = [];
@@ -688,19 +711,69 @@ async function goOutAndLook() {
   return bombs();
 }
 
+async function reveal() {
+  await tween(baddie, 'alpha', 1, 0.8);
+  if (baddie.evil) {
+    await say(baddie, `Remember me? It's ${baddie.name}!`, 1.6);
+    await say(baddie, "You wouldn't let me join your team!", 1.8);
+  } else await say(baddie, 'Hehehe...', 1.2);
+  const who = baddie.evil ? `It's ${baddie.name}, the survivor you wouldn't let join, and they've got a knife!` : "It's a BADDIE with a knife!";
+  const arm = baddie.armour ? ` ${baddie.evil ? 'They are' : 'He is'} wearing ${ARMOURS[baddie.armour].toUpperCase()}. You need a ${SWORDS[baddie.armour]} or better!` : '';
+  await narrate(who + arm);
+}
+
+// Your base got blown up and you haven't rebuilt it: you're out in the open.
+async function noBaseNight() {
+  S.cam.focus = () => (hero.x + baddie.x) / 2;
+  await narrate(`Night ${G.night}. You have no base to hide in...`);
+  caption('...');
+  await Promise.all([footsteps(5), walkTo(baddie, hero.x + 7 * B, 50)]);
+  await reveal();
+  if (G.sword >= 0) hero.item = 'sword' + G.sword;
+  const tree = S.trees.find(t => t.c === G.spot.tree);
+  const opts = [];
+  if (G.sword >= 0) opts.push(['attack', `⚔️ Attack with your ${SWORDS[G.sword]}`]);
+  else {
+    if (!tree.gone) opts.push(['chop', '🌲 Chop down the tree to make a sword']);
+    opts.push(['axe', '🪓 Hit him with your axe']);
+  }
+  if (G.mine) opts.push(['mine', '🪜 Hide down in your mine']);
+  let c = await menu('What do you do?', opts);
+  if (c === 'attack') return fight();
+  if (c === 'axe') return axeAttack();
+  if (c === 'chop') {
+    await chopTree(tree, true);
+    hero.item = 'sword' + G.sword;
+    await walkTo(baddie, hero.x + 4 * B, 110);
+    if (await ask('The baddie is right there! Attack?', YN) === 'y') return fight();
+    if (!G.mine) {
+      await say(hero, 'Nowhere to hide!', 1.2);
+      await walkTo(baddie, hero.x + 36, 120);
+      await stab(baddie, hero);
+      return heroDies('nobase', 'There was nowhere to hide!');
+    }
+  }
+  caption('Everyone climbs down into the mine!');
+  await Promise.all(people().map(a => climbDown(a)));
+  await walkTo(baddie, shaftX() + 2 * B, 80);
+  await say(baddie, 'Where did they go?!', 1.6);
+  walkTo(baddie, baddie.x + 14 * B, 90).then(() => { baddie.visible = false; });
+  await wait(1.5);
+}
+
 async function fight() {
   caption('CHARGE!');
   await walkTo(hero, baddie.x - 36, 220);
-  if (baddie.armour && G.sword < 1) {
+  if (G.sword < baddie.armour) {
     await swing(hero); SFX.clink(); shake(4);
     burst(baddie.x - 12, baddie.y - 40, 14, ['#c89b5c', '#7a5530', '#fff'], { speed: 200, life: 0.5, size: 5 });
     hero.item = null; restArm(hero);
     await say(hero, 'SNAP!', 0.9);
     await say(baddie, 'Hehe. Nice try.', 1.2);
     await stab(baddie, hero);
-    return heroDies('snap', 'Your wooden sword snapped on his armour!');
+    return heroDies('snap', `Your ${SWORDS[G.sword]} snapped on the ${ARMOURS[baddie.armour]}!`);
   }
-  const hits = G.sword >= 2 ? 2 : 3;
+  const hits = G.sword > baddie.armour ? 2 : 3; // a stronger sword than their armour wins faster
   for (let i = 0; i < hits; i++) {
     await swing(hero); SFX.hit();
     baddie.flash = 0.15; baddie.x += 14; shake(5);
@@ -708,11 +781,11 @@ async function fight() {
     if (i === hits - 2) await say(baddie, 'OW!', 0.6); else await wait(0.25);
   }
   restArm(hero);
-  burst(baddie.x, baddie.y - 35, 40, ['#3d2457', '#6b3fa0', '#2a173d', '#aaa'], { speed: 200, grav: 0, life: 0.9, size: 10 });
+  burst(baddie.x, baddie.y - 35, 40, baddie.look ? [baddie.look.shirt, baddie.look.hair, '#aaa'] : ['#3d2457', '#6b3fa0', '#2a173d', '#aaa'], { speed: 200, grav: 0, life: 0.9, size: 10 });
   SFX.boom(); baddie.visible = false;
   await wait(0.5);
   hop(hero); await say(hero, 'YEAH!', 1);
-  await narrate('You beat the baddie!');
+  await narrate(baddie.evil ? `You beat ${baddie.name}!` : 'You beat the baddie!');
   caption('You head back inside.');
   await goIn();
 }
@@ -742,9 +815,7 @@ async function bombs() {
   await walkTo(baddie, front + 4 * B, 80); baddie.dir = -1;
   await say(baddie, 'Hehehe...', 1.2);
 
-  const opts = [['middle', '🧍 Stay in the middle of the room']];
-  if (b.rooms) opts.push(['backroom', '🚪 Hide in the back room']);
-  else opts.push(['dig', '⛏️ Dig a hole out the back']);
+  const opts = [['middle', '🧍 Stay in the middle of the room'], ['dig', '⛏️ Dig a hole out the back']];
   if (G.mine) opts.push(['mine', '🪜 Climb down into the mine']);
   opts.push(['front', '🏃 Run out the front door']);
   const mine = await menu("You can't see him, but you hear him put something down by the door... TWO BOMBS! What do you do?", opts);
@@ -757,7 +828,7 @@ async function bombs() {
     const k = pick(left); taken.add(k); plan.push([f, k]);
   }
   if (G.friends.length) {
-    for (const [f, k] of plan.slice(1)) await say(f, { middle: "I'm staying put!", backroom: 'Back room!', dig: "I'll dig!", mine: 'Down the mine!', front: 'RUN!' }[k], 1.1);
+    for (const [f, k] of plan.slice(1)) await say(f, { middle: "I'm staying put!", dig: "I'll dig!", mine: 'Down the mine!', front: 'RUN!' }[k], 1.1);
   }
   await resolveBombs(plan);
 }
@@ -769,7 +840,6 @@ async function resolveBombs(plan) {
   // move everyone to where they chose
   const moves = [];
   for (const a of who('middle')) moves.push(walkTo(a, insideX() + (a === hero ? 0 : 12), 120));
-  for (const a of who('backroom')) moves.push(walkTo(a, backRoomX() + (a === hero ? 0 : -14), 170));
   for (const a of who('mine')) moves.push(climbDown(a));
   for (const a of who('dig')) moves.push(digOut(a));
   await Promise.all(moves);
@@ -782,8 +852,7 @@ async function resolveBombs(plan) {
     await death(a);
   }
   await explode(b);
-  if (b.stone) { caption('The stone walls held!'); await wait(1.4); }
-  else for (const a of who('middle')) { a.dead = true; a.angle = -Math.PI / 2; }
+  for (const a of who('middle')) { a.dead = true; a.angle = -Math.PI / 2; }
   if (hero.dead) {
     const cause = who('front').includes(hero) ? 'frontdoor' : 'kaboom';
     await narrate(cause === 'frontdoor' ? 'The baddie was waiting right outside the door.' : 'KABOOM! The bombs blew up the base with you inside.');
@@ -791,7 +860,7 @@ async function resolveBombs(plan) {
   }
   await say(hero, 'Phew!', 0.8);
   await tween(baddie, 'alpha', 1, 0.4);
-  baddie.dir = 1; await say(baddie, 'Hahaha!', 1);
+  baddie.dir = 1; await say(baddie, baddie.evil ? "That's for not letting me join!" : 'Hahaha!', 1.4);
   walkTo(baddie, baddie.x + 14 * B, 90).then(() => { baddie.visible = false; });
   await wait(1.5);
 }
@@ -809,7 +878,8 @@ async function climbUp(a) {
 }
 
 async function digOut(a) {
-  const s = S.base.s, g = S.base.g;
+  const s = leftWall(), g = S.base.g; // dig under the back (left) wall of the leftmost room
+  S.base.rubbleFrom = s - 1;
   await walkTo(a, (s + 1.5) * B, 160); a.dir = -1;
   const item = a.item; a.item = 'axe' + (a === hero ? G.axe : 0);
   const digCell = async (c, r) => {
@@ -840,18 +910,11 @@ async function morning() {
     G.friends = G.friends.filter(f => !f.dead);
   }
   await narrate(`You survived night ${G.night}!${G.friends.length ? ` (and so did ${G.friends.map(f => f.name).join(' and ')})` : ''}`);
+  if (S.base.gone) await narrate(`Your base got blown up! To rebuild it you need ${REBUILD_WOOD} wood and ${REBUILD_STONE} stone. Until then you'll be out in the open at night...`);
   // come out of hiding
   const back = [];
   for (const a of people()) if (a.free) back.push(climbUp(a));
   await Promise.all(back);
-  if (S.base.mainGone) {
-    caption('Your base got blown up! You rebuild it...');
-    for (const k of S.escape) S.dug.delete(k); S.escape = [];
-    await walkTo(hero, insideX(), 160);
-    S.base.mainGone = false; syncCells(S.base);
-    await buildCells(S.base);
-    S.base.door = 'closed'; SFX.door();
-  }
   await Promise.all([goIn(hero), ...G.friends.map((f, i) => walkTo(f, friendHomeX(i), 150))]);
   placeEveryoneInside();
   for (const t of S.trees) { t.gone = false; t.angle = 0; }
@@ -861,10 +924,15 @@ async function morning() {
 async function day() {
   G.left = ACTIONS_PER_DAY;
   hero.item = 'axe' + G.axe;
+  const next = armourFor(G.night + 1);
+  if (next > armourFor(G.night)) {
+    await narrate(`You find big footprints outside... The baddies are getting tougher! From tonight they wear ${ARMOURS[next].toUpperCase()}.` +
+      (G.sword < next ? ` You'll need a ${SWORDS[next]} or better to beat them.` : ` Good thing you have a ${SWORDS[G.sword]}!`));
+  }
   while (G.left > 0) {
     const c = await menu(`Day ${G.day}. What do you want to do?`, [
       ['chop', '🌲 Chop trees'],
-      ['build', '🔨 Build your base bigger'],
+      S.base.gone ? ['build', `🔨 Rebuild your base (${REBUILD_WOOD} wood, ${REBUILD_STONE} stone)`] : ['build', '🔨 Build your base bigger'],
       ['mine', G.mine ? '⛏️ Go mining' : '⛏️ Dig a mine'],
       ['explore', '🧭 Explore'],
     ]);
@@ -915,22 +983,43 @@ async function chopTree(tree, atNight) {
 }
 
 async function dayChop() {
-  const tree = S.trees.filter(t => !t.gone && t.c > S.base.s + 4).sort((a, b) => a.c - b.c)[0];
+  // chop a tree further away, so the one by your base is still there at night
+  const trees = S.trees.filter(t => !t.gone && t.c > S.base.s + 4).sort((a, b) => a.c - b.c);
+  const tree = trees.find(t => t.c !== G.spot.tree) || trees[0];
   await chopTree(tree, false);
   hero.item = 'axe' + G.axe;
   await goIn();
 }
 
+async function rebuild() {
+  const b = S.base;
+  if (G.wood < REBUILD_WOOD || G.stone < REBUILD_STONE) {
+    const need = [];
+    if (G.wood < REBUILD_WOOD) need.push(`${REBUILD_WOOD - G.wood} more wood (chop trees)`);
+    if (G.stone < REBUILD_STONE) need.push(`${REBUILD_STONE - G.stone} more stone (go mining)`);
+    await narrate(`You need to do more work first! You still need ${need.join(' and ')}.`);
+    return false;
+  }
+  G.wood -= REBUILD_WOOD; G.stone -= REBUILD_STONE;
+  caption('Rebuilding your base...');
+  for (const k of S.escape) S.dug.delete(k); S.escape = [];
+  await walkTo(hero, insideX(), 160);
+  b.gone = false; b.rooms = 0; b.rubbleFrom = null; syncCells(b);
+  await buildCells(b);
+  await tween(b, 'back', 1, 0.3);
+  b.door = 'closed'; b.furnish = true; SFX.door(); SFX.ding();
+  await say(hero, 'Home again!', 1);
+  await narrate('Your base is back!');
+  return true;
+}
+
 async function dayBuild() {
   const b = S.base;
-  const opts = [];
-  if (b.rooms < MAX_ROOMS) opts.push(['room', `🧱 Add a room (${ROOM_COST} wood)`]);
-  if (!b.stone) opts.push(['stone', `🪨 Stone walls (${STONE_WALL_COST} stone)`]);
-  opts.push(['cancel', '↩️ Never mind']);
-  if (opts.length === 1) { await narrate("Your base is as big and strong as it can get!"); return false; }
-  const c = await menu(`What do you want to build? You have ${G.wood} wood and ${G.stone} stone.`, opts);
+  if (b.gone) return rebuild();
+  if (b.rooms >= MAX_ROOMS) { await narrate("Your base is as big as it can get!"); return false; }
+  const c = await menu(`What do you want to build? You have ${G.wood} wood.`, [['room', `🧱 Add a room (${ROOM_COST} wood)`], ['cancel', '↩️ Never mind']]);
   if (c === 'cancel') return false;
-  if (c === 'room') {
+  {
     if (G.wood < ROOM_COST) { await narrate(`You need ${ROOM_COST} wood to add a room. Go chop some trees!`); return false; }
     G.wood -= ROOM_COST; b.rooms++;
     caption('Building a new room...');
@@ -938,14 +1027,7 @@ async function dayBuild() {
     await walkTo(hero, (b.s - 4 * b.rooms + 2.5) * B, 160);
     await buildCells(b);
     SFX.ding(); await say(hero, 'More room!', 1);
-    await narrate(b.rooms === 1 ? 'You built a back room! If the baddie bombs the front, you could hide back here.' : 'Another room! Your base is getting BIG.');
-  } else {
-    if (G.stone < STONE_WALL_COST) { await narrate(`You need ${STONE_WALL_COST} stone for stone walls. Go mining!`); return false; }
-    G.stone -= STONE_WALL_COST; b.stone = true;
-    caption('Building stone walls...');
-    syncCells(b); await buildCells(b);
-    SFX.ding(); await say(hero, 'Rock solid!', 1);
-    await narrate("Stone walls! Bombs can't blow these up.");
+    await narrate(b.rooms === 1 ? 'You built a new room! More space for you and your team.' : 'Another room! Your base is getting BIG.');
   }
   await walkTo(hero, insideX(), 160);
   return true;
@@ -987,16 +1069,16 @@ async function dayMine() {
   if (found.iron) bits.push(`${found.iron} IRON`);
   if (found.crystal) bits.push(`${found.crystal} CRYSTAL`);
   await narrate(`Mining done! ${bits.join(', ')}.`);
-  const tier = found.crystal ? 2 : found.iron ? 1 : 0;
-  if (tier > G.axe || tier > G.sword) {
+  const axeTier = found.crystal ? 2 : found.iron ? 1 : 0, swordTier = found.crystal ? 3 : found.iron ? 2 : 1;
+  if (axeTier > G.axe || swordTier > G.sword) {
     hero.item = null;
-    for (let i = 0; i < 5; i++) { burst(hero.x, hero.y - 30, 6, tier === 2 ? ['#6ff0f2', '#fff', '#7a4dff'] : ['#e0b089', '#fff'], { speed: 90, grav: 0, life: 0.4, size: 4 }); beep(500 + i * 120, 0.06); await wait(0.15); }
+    for (let i = 0; i < 5; i++) { burst(hero.x, hero.y - 30, 6, swordTier === 3 ? ['#6ff0f2', '#fff', '#7a4dff'] : swordTier === 2 ? ['#e0b089', '#fff'] : ['#a0a0a8', '#fff'], { speed: 90, grav: 0, life: 0.4, size: 4 }); beep(500 + i * 120, 0.06); await wait(0.15); }
     const made = [];
-    if (tier > G.axe) { G.axe = tier; made.push(AXES[tier].toUpperCase()); }
-    if (tier > G.sword) { G.sword = tier; made.push(SWORDS[tier].toUpperCase()); }
+    if (axeTier > G.axe) { G.axe = axeTier; made.push(AXES[axeTier].toUpperCase()); }
+    if (swordTier > G.sword) { G.sword = swordTier; made.push(SWORDS[swordTier].toUpperCase()); }
     hero.item = 'sword' + G.sword; SFX.ding();
     await tween(hero, 'arm', -2.6, 0.2, easeOut); await say(hero, 'Shiny!', 1); restArm(hero);
-    await narrate(`You made a ${made.join(' and a ')}!${tier === 1 ? ' Iron chops trees faster and can beat armoured baddies.' : ' Crystal is the best there is!'}`);
+    await narrate(`You made a ${made.join(' and a ')}!` + ['', ' It can beat baddies in stone armour.', ' Iron chops trees faster and beats iron armour.', ' Crystal is the best there is!'][swordTier]);
     hero.item = 'axe' + G.axe;
   }
   caption('You climb back up...');
@@ -1013,11 +1095,11 @@ async function dayExplore() {
   const roll = Math.random();
   const meet = G.friends.length < 3 && (G.met === 0 ? roll < 0.8 : roll < 0.5);
   if (meet) {
-    const used = new Set(G.friends.map(f => f.name));
+    const used = new Set([...G.friends, ...G.rejected].map(f => f.name));
     const name = pick(FRIEND_NAMES.filter(n => !used.has(n)));
     const look = FRIEND_LOOKS[G.met % FRIEND_LOOKS.length];
     const f = mkActor('friend', far + 9 * B, look); f.name = name; f.dir = -1; f.item = 'axe0';
-    G.friends.push(f); G.met++;
+    S.strangers.push(f); G.met++; // only joins G.friends if you say yes
     await walkTo(f, far + 2 * B, 120);
     await say(f, 'Oh! Hi!', 1);
     await say(f, `I'm ${name}. I'm trying to survive too.`, 2);
@@ -1025,12 +1107,14 @@ async function dayExplore() {
       await say(f, "Yes! Let's go!", 1.2);
       await narrate(`${name} joined your team! But be careful: ${name} will never make the same choice as you.`);
       caption('You walk home together...');
+      S.strangers = S.strangers.filter(x => x !== f); G.friends.push(f);
       const idx = G.friends.length - 1;
       await Promise.all([goIn(), walkTo(f, friendHomeX(idx), 160)]);
       return;
     }
-    await say(f, 'Oh. OK... bye then.', 1.4);
-    walkTo(f, far + 14 * B, 120).then(() => { G.friends = G.friends.filter(x => x !== f); });
+    G.rejected.push({ name, look });
+    await say(f, "Fine. You'll be sorry...", 1.6);
+    walkTo(f, far + 14 * B, 120).then(() => { S.strangers = S.strangers.filter(x => x !== f); });
     caption('You head home...');
   } else {
     S.chest = { x: far + 2 * B, y: groundAt(far + 2 * B), open: false };

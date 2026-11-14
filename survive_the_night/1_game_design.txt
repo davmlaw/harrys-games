@@ -37,3 +37,13 @@ How it's built so far (choices filled in by Claude, change freely):
   find a treasure chest).
 - Back room: a safe place to hide from bombs. Stone walls: bombs can't blow the base up. Mine: hide down there.
 - From night 3 some baddies wear armour: a wooden sword snaps, you need iron or crystal.
+
+----------------------------------------------------------------------------------------------------
+UPDATE 2 (November 2026), Harry's feedback:
+- You can't rebuild your base for free: it needs 10 wood and 5 stone (stone comes from the mine). If you don't
+  have enough it tells you to go and do more work first.
+- It should be harder each night: baddies get better and better armour, and you need a better sword to beat them.
+  (Built as: none -> stone -> iron -> crystal armour, going up every 2 nights; stone sword added.)
+- No stone walls.
+- Sometimes the bad guy is someone you didn't recruit.
+- A bomb always blows the WHOLE house up, every room. You can still dig out the back.

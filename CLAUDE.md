@@ -66,8 +66,11 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - **Two state objects**: `S` is what's on screen (camera, trees, base blocks, particles, dug cells); `G` is progress
   (night/day, wood, stone, tool tiers `axe`/`sword`, mine depth, `friends` actors).
 - **Friends never pick the same option as you** in the bomb choice (`bombs()`), and their outcome follows the same rules.
-- **Base** blocks come from `wantedCells(b)` (main room + extra rooms to the left, stone or plank walls);
-  `syncCells` + `buildCells` animate any new/changed blocks. Bombs destroy only the main room unless `b.stone`.
+- **Base** blocks come from `wantedCells(b)` (main room + extra rooms to the left); `syncCells` + `buildCells`
+  animate any new/changed blocks. Bombs always destroy the whole base (`b.gone`); rebuilding is a day action
+  costing `REBUILD_WOOD`/`REBUILD_STONE`, and until then nights run through `noBaseNight()`.
+- **Difficulty**: `armourFor(night)` raises baddie armour a tier every 2 nights; the sword tier (`SWORDS`) must be
+  at least the armour tier. Survivors you turn away go into `G.rejected` and may come back as the baddie.
 - **World** is a column heightmap (`gh(c)`, block size `B`=30); `oreAt(c,r)` places iron/crystal in the stone.
   `SPOTS` are the build sites. The camera zooms by `Z` and tracks `S.cam.focus` / `S.cam.focusY`.
 - **Testing**: `index.html?auto=y,2,2,1` plays itself, answering each question in turn (y/n or menu number;
