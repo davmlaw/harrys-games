@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Brick Racers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@700;900&display=swap">
+<link rel="stylesheet" href="style.css?v=1">
+<meta name="description" content="Race brick-built cars, win bricks in the times-table pit stop, and bolt on upgrades until your car can fly! A game by Harry.">
+<meta name="theme-color" content="#1d1a33">
+</head>
+<body>
+<div id="app">
+  <header>
+    <a href="../index.html" class="back">← Harry's Games</a>
+    <h1>Brick Racers</h1>
+    <button id="mute" title="Sound on/off (M)">🔊</button>
+  </header>
+
+  <div id="stage">
+    <canvas id="cv"></canvas>
+
+    <!-- maths question during the race (slow motion while it's up) -->
+    <div id="qPanel" hidden>
+      <div class="qq"></div>
+      <div class="qopts"><button data-i="0"></button><button data-i="1"></button><button data-i="2"></button></div>
+      <div class="qbar"><i></i></div>
+    </div>
+
+    <div id="titleUI" class="ui">
+      <div class="titleBox">
+        <div class="logo" aria-label="Brick Racers"></div>
+        <p class="pickMsg">Pick your car!</p>
+        <div id="carPick"></div>
+        <button id="goBtn" class="big">LET'S RACE! 🏁</button>
+      </div>
+    </div>
+
+    <div id="resultUI" class="ui" hidden>
+      <div class="card">
+        <h2 id="resTitle"></h2>
+        <ol id="resList"></ol>
+        <div id="resBricks"></div>
+        <button id="pitBtn" class="big">PIT STOP MATHS! 🔧</button>
+      </div>
+    </div>
+
+    <div id="pitUI" class="ui" hidden>
+      <div class="card pit">
+        <div class="pitTop"><span>🔧 PIT STOP</span><span id="pitNum"></span><span id="pitStreak"></span></div>
+        <div id="pitBody">
+          <div class="pq"></div>
+          <div class="popts"><button data-i="0"></button><button data-i="1"></button><button data-i="2"></button></div>
+          <div class="pbar"><i></i></div>
+          <div class="pfb"></div>
+        </div>
+        <div id="pitDone" hidden>
+          <div class="pdTitle"></div>
+          <button id="garBtn" class="big">TO THE GARAGE! 🛠️</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="garageUI" class="ui" hidden>
+      <div class="gTop">
+        <div class="gBricks">🧱 <b id="gBricks">0</b></div>
+        <div id="gCars"></div>
+        <div class="gNext"><small>Next race</small><b id="gTrack"></b></div>
+        <button id="raceBtn" class="big">RACE! 🏁</button>
+      </div>
+      <div class="gMain">
+        <div class="gLeft">
+          <canvas id="gCar" width="520" height="220"></canvas>
+          <div id="shop"></div>
+        </div>
+        <div class="gRight">
+          <h3>Times Table Grid</h3>
+          <div id="grid"></div>
+          <p class="gKey"><span class="k b1"></span>getting it <span class="k gold">⭐</span>learned! Fill a row = <b>+100 🧱</b></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="toasts"></div>
+
+    <div id="mbar">
+      <a href="../index.html">← Games</a>
+      <button id="fsBtn">Full screen</button>
+    </div>
+
+    <div id="touch" aria-hidden="true">
+      <div id="joyZone"><div id="joyBase"><div id="joyKnob"></div></div></div>
+      <div class="btns">
+        <button data-k="fly" class="fly">✈️<small>FLY</small></button>
+        <button data-k="nitro" class="nitro">💨<small>NITRO</small></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="rotate">
+    <div class="phone">📱</div>
+    <p>Turn your phone sideways to play!</p>
+    <button id="rotateFs" class="big">Full screen</button>
+    <button id="anyway" class="anyway">Play this way anyway</button>
+  </div>
+
+  <div id="help">
+    <span><kbd>↑</kbd> go</span>
+    <span><kbd>←</kbd><kbd>→</kbd> steer</span>
+    <span><kbd>↓</kbd> brake</span>
+    <span><kbd>Space</kbd> nitro</span>
+    <span><kbd>F</kbd> fly</span>
+    <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> answer</span>
+    <span>Drive through the <b>?</b> bricks for a maths question and a turbo boost!</span>
+  </div>
+</div>
+<script src="game.js?v=1"></script>
+</body>
+</html>

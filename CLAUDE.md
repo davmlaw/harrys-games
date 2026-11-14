@@ -24,6 +24,9 @@ The games are independent and share no code.
   bit), then a quick sum appears: click the cookie with the right answer of three. Buy items (each many times) that add
   cookies per right answer, aim for THE GOLDEN COOKIE (+100 billion per answer, costs 1 trillion). Split into `index.html`,
   `style.css`, `game.js`. Harry asked for "Cookie Clicker" but that's an existing game's name, so it's called Mega Cookie.
+- `brick_racers/` — "Brick Racers" (started November 2026), a top-down car racing game in a toy-brick world (never
+  call it "Lego"; it's a real brand) mixed with times tables. Race 3 laps, then a Pit Stop maths quiz, then the garage to
+  buy car upgrades (ending in jet engines so the car flies). Split into `index.html`, `style.css`, `game.js`.
 
 ## Working with Harry
 
@@ -136,6 +139,27 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - **Mobile**: CSS-only (`max-width:820px` portrait and `max-height:520px` landscape): the page fits the screen and only
   the shop list scrolls. The shop lists the Golden Cookie first, then the items in price order (`renderShop`).
 - `?shot=N` loads N cookies with a few items owned (for screenshots).
+
+### brick_racers (`game.js`)
+
+- **Flow** (`mode`): `title` (pick Blue Bugatti / Orange McLaren / Red Ferrari) → `race` → `result` → `pit` (6 timed
+  questions, `PIT_QS`/`PIT_TIME`) → `garage` (shop + times-table grid) → `race`. The first race skips the garage.
+- **Track** = closed Catmull-Rom loop through `TRACKS[i].pts`, resampled every ~12px into `T.X/T.Y/T.A`. `bake()` draws the
+  baseplate, road, kerbs and themed scenery once into `T.img`; the race only blits the visible part. Tracks rotate by
+  `G.races`. Car progress (`prog`) comes from the nearest sample each frame (wrapped delta), so laps/positions just work and
+  corner-cutting over grass counts. Off the road (`TW` half-width) = half speed unless Glider Wings.
+- **Physics** (`physics`): arcade forward/lateral split with `grip`; stats from `statsFor` (player = `BASE` + upgrades,
+  rivals scale with `G.races` plus a mild rubber band `c.rb`). Car-car collisions are circles with mass (Crash Bumper);
+  hard hits spin the lighter car and burst brick particles. Flying cars (`alt`) skip collisions and grass.
+- **Maths brain**: facts are unordered pairs `fkey(a,b)` (so 3×4 fills both grid cells), b 2–12 (ones don't count). Tables
+  unlock in `ORDER` (2, 10, 5, 3, 4, 11, 9, 6, 8, 12, 7) once the newest is going well. Leitner boxes (`b`, intervals `IV`
+  counted in questions, `G.qn`); wrong answers drop 2 boxes and come back in 2 questions. Box ≥3 = gold ⭐ on the grid;
+  a fully gold row = +100 bricks once (`G.rows`). `?` bricks on the track ask in slow-mo (`SLOWMO`); right = turbo + 5 bricks.
+- `UPG` is the shop; each part is drawn on the car in `drawCar` (works for the garage preview and thumbnails too).
+- State `G` saves to `localStorage` (`brickRacers1`). `index.html` loads `style.css?v=N`/`game.js?v=N`: bump N each release.
+- **Mobile** copies King of the Bins: `TOUCH`, floating joystick (push the way you want to go), NITRO/FLY buttons.
+- **Testing**: `?auto` plays itself forever (race, pit, garage buys, next race); `?shot=garage|race|fly|pit`, `&track=N`,
+  `&mobile`. Timer loop so headless `--virtual-time-budget` screenshots advance. A full auto race is ~100–140s virtual time.
 
 ### food_wars2 (`index.html`)
 
