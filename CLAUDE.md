@@ -13,6 +13,9 @@ The games are independent and share no code.
 - `food_wars2/` — "Food Wars!" (started April 2026, Harry's first game), an idle/clicker fast-food shop tycoon for 8–10 year olds.
   Entirely in one `index.html` (CSS + ~1,800 lines of inline JS).
 - `apocalypse/` — "Apocalypse" (started May 2026), a medieval tower-defence game (villagers vs. zombies). Split into `index.html`, `style.css`, `game.js`.
+- `survive_the_night/` — "Survive the Night" (started November 2026), a blocky side-scrolling choose-your-own-adventure:
+  build a base, then survive as many nights as you can. Split into `index.html`, `style.css`, `game.js`. Harry's spec is
+  `1_game_design.txt` plus his sketch `design_sketch.jpg`.
 
 ## Running
 
@@ -52,6 +55,24 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
   multiplied by the speed setting. `step(dt)` handles spawn/move/fire/collision, then `draw()` renders
   everything procedurally on the 900×600 canvas (no image assets).
 - Tunables live in `CFG` (HP, speeds, ranges) and `SETTINGS` (read from the start-screen inputs).
+
+### survive_the_night (`game.js`)
+
+- **The story is async code.** `play()` loops `night()` → `morning()` → `day()`; branch functions (`goOutAndLook`,
+  `fight`, `bombs`/`resolveBombs`, `dayChop`/`dayBuild`/`dayMine`/`dayExplore`) read top to bottom. Each cutscene
+  helper (`walkTo`, `tween`, `wait`, `say`, `swing`, `hop`) returns a promise resolved by the frame loop's `tasks`
+  list. `ask`/`narrate`/`menu` show DOM choice buttons and resolve with the chosen key. Death throws `GameOver`,
+  caught in `play()`.
+- **Two state objects**: `S` is what's on screen (camera, trees, base blocks, particles, dug cells); `G` is progress
+  (night/day, wood, stone, tool tiers `axe`/`sword`, mine depth, `friends` actors).
+- **Friends never pick the same option as you** in the bomb choice (`bombs()`), and their outcome follows the same rules.
+- **Base** blocks come from `wantedCells(b)` (main room + extra rooms to the left, stone or plank walls);
+  `syncCells` + `buildCells` animate any new/changed blocks. Bombs destroy only the main room unless `b.stone`.
+- **World** is a column heightmap (`gh(c)`, block size `B`=30); `oreAt(c,r)` places iron/crystal in the stone.
+  `SPOTS` are the build sites. The camera zooms by `Z` and tracks `S.cam.focus` / `S.cam.focusY`.
+- **Testing**: `index.html?auto=y,2,2,1` plays itself, answering each question in turn (y/n or menu number;
+  falls back to option 1 when the list runs out). It ticks on a timer so headless Chromium
+  `--virtual-time-budget` screenshots advance. Results vary run to run (random friends/loot/armour).
 
 ### food_wars2 (`index.html`)
 

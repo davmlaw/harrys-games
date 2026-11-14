@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Survive the Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <a href="../index.html" class="back">← Harry's Games</a>
+    <h1>Survive the Night</h1>
+    <button id="mute" title="Sound on/off">🔊</button>
+  </header>
+
+  <div id="stage">
+    <canvas id="cv" width="960" height="540"></canvas>
+
+    <div id="title" class="overlay">
+      <h2>Survive the Night</h2>
+      <p>Build a base. Chop, mine, explore and find friends. How many nights can you survive?</p>
+      <button id="playBtn" class="big">▶ Play</button>
+      <p class="small">A choose-your-own-adventure game by Harry</p>
+    </div>
+
+    <div id="ending" class="overlay" hidden>
+      <div class="emoji" id="endEmoji"></div>
+      <h2 id="endTitle"></h2>
+      <p id="endText"></p>
+      <div id="endStats"></div>
+      <button id="againBtn" class="big">↻ Play again</button>
+    </div>
+  </div>
+
+  <div id="story">
+    <p id="text"></p>
+    <div id="choices"></div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+FIRST NIGHT — Harry's game design (November 2026)
+(Working title. Original sketch: design_sketch.jpg — the "h" boxes are "n", i.e. Y/N choices.)
+
+A side-scrolling choose-your-own-adventure in a blocky, build-a-base / chop-a-tree style.
+You don't steer the character with the keyboard: options pop up and you click them (or press the key).
+There should be a few little cutscenes between choices.
+
+Story:
+- You walk along the world. At certain spots a prompt asks "Build your base here? Y / N".
+  You get to choose where to build.
+- You start with an axe.
+- The first night, a baddie comes.
+- Choice: go out and chop down a tree. Chopping a tree turns into a wooden sword (simple — no real crafting).
+  With the sword you can attack the baddie and beat him.
+- You CANNOT hurt baddies with the axe.
+- If you don't attack, you stay in your base all night waiting for him to go away. But he walks up,
+  puts down TWO bombs and steps back.
+- Then:
+  - Stay in the middle of the room, away from the bombs -> the base blows up and you die.
+  - Run out the front door -> he gets you with his knife. (There's no back door — you forgot to build one.)
+  - Dig a hole out the back of the base -> you escape before the bombs explode.
+
+----------------------------------------------------------------------------------------------------
+UPDATE (November 2026): renamed "Survive the Night". Multiple nights — survive as many as you can.
+
+- You can't see the baddie at first. It says "you hear footsteps outside". You can go out and look — that's when
+  you first see the baddie — or stay inside. If you go out you can run back inside, fight, etc.
+- In the day you can come out, chop down more trees, and build your base bigger.
+- You can explore. You might find other people trying to survive and recruit them onto your team.
+- Friends never make the same choice as you. E.g. the baddie bombs the base, you pick "dig out the back", so they
+  pick something else — which might mean one of you dies.
+- You can dig underground: a mine. Mining finds rare ores that make better tools (better at chopping trees).
+
+How it's built so far (choices filled in by Claude, change freely):
+- 2 things to do each day: chop trees (wood; the first chop makes a wooden sword), build (add a room for 4 wood /
+  stone walls for 6 stone), mine (stone, iron, crystal → iron/crystal axe + sword), explore (meet a survivor or
+  find a treasure chest).
+- Back room: a safe place to hide from bombs. Stone walls: bombs can't blow the base up. Mine: hide down there.
+- From night 3 some baddies wear armour: a wooden sword snaps, you need iron or crystal.
