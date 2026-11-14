@@ -1,39 +1,39 @@
 'use strict';
 // Mega Cookie: a maths game. A sum pops up and three cookies show answers.
 // Click the right cookie to win cookies (answer fast for a speed bonus), click a wrong one and you lose some.
-// Spend cookies in the shop on things that add cookies per right answer or bake cookies every second.
+// Spend cookies in the shop on things that add more cookies to every right answer.
 // Everything is PLUS, never times (Harry's rule).
 
-// pa = + cookies per right answer, ps = + cookies every second
+// pa = + cookies for every right answer. Nothing bakes on its own: cookies only come from maths (Harry's rule).
 const ITEMS = [
-  {id:'pencil',  ic:'✏️', nm:'Sharp Pencil',     pa:5,      cost:25},
-  {id:'fingers', ic:'👆', nm:'Sticky Fingers',   ps:1,      cost:15},
-  {id:'chips',   ic:'🍫', nm:'Extra Choc Chips', ps:5,      cost:100},
+  {id:'pencil',  ic:'✏️', nm:'Sharp Pencil',     pa:4,      cost:25},
+  {id:'fingers', ic:'👆', nm:'Sticky Fingers',   pa:3,      cost:15},
+  {id:'chips',   ic:'🍫', nm:'Extra Choc Chips', pa:12,      cost:100},
   {id:'ruler',   ic:'📏', nm:'Magic Ruler',      pa:40,     cost:400},
-  {id:'sprink',  ic:'🌈', nm:'Sprinkles',        ps:25,     cost:600},
-  {id:'abacus',  ic:'🧮', nm:'Abacus',           pa:250,    cost:3000},
-  {id:'oven',    ic:'🔥', nm:'Big Oven',         ps:150,    cost:4000},
-  {id:'book',    ic:'📘', nm:'Maths Book',       pa:1500,   cost:20000},
-  {id:'milk',    ic:'🥛', nm:'Milk Fountain',    ps:800,    cost:25000},
-  {id:'jar',     ic:'🫙', nm:'Giant Cookie Jar', ps:2000,   cost:70000},
-  {id:'star',    ic:'⭐', nm:"Teacher's Gold Star",pa:10000, cost:150000},
-  {id:'icing',   ic:'🧁', nm:'Rainbow Icing',    ps:4000,   cost:150000},
-  {id:'truck',   ic:'🚚', nm:'Cookie Truck',     ps:20000,  cost:1e6},
-  {id:'brain',   ic:'🧠', nm:'Big Brain',        pa:70000,  cost:1.2e6},
-  {id:'factory', ic:'🏭', nm:'Cookie Factory',   ps:100000, cost:6e6},
-  {id:'owl',     ic:'🦉', nm:'Professor Owl',    pa:400000, cost:8e6},
-  {id:'rocket',  ic:'🚀', nm:'Cookie Rocket',    ps:500000, cost:4e7},
-  {id:'robot',   ic:'🤖', nm:'Maths Robot',      pa:2.5e6,  cost:6e7},
-  {id:'moon',    ic:'🌙', nm:'Moon Bakery',      ps:2.5e6,  cost:2.5e8},
-  {id:'diamond', ic:'💎', nm:'Diamond Cookie',   ps:9e6,    cost:1e9},
-  {id:'crown',   ic:'👑', nm:'Genius Crown',     pa:2e7,    cost:1.5e9},
-  {id:'volcano', ic:'🌋', nm:'Cookie Volcano',   ps:2e7,    cost:2.5e9},
-  {id:'planet',  ic:'🪐', nm:'Cookie Planet',    ps:4e7,    cost:5e9},
-  {id:'galaxy',  ic:'🌌', nm:'Cookie Galaxy',    ps:2e8,    cost:3e10},
-  {id:'wizard',  ic:'🧙', nm:'Number Wizard',    pa:1.5e8,  cost:4e10},
-  {id:'univ',    ic:'✨', nm:'Cookie Universe',  ps:7.5e8,  cost:1.5e11},
-  {id:'dragon',  ic:'🐉', nm:'Cookie Dragon',    ps:2e9,    cost:5e11},
-  {id:'golden',  ic:'🏆', nm:'THE GOLDEN COOKIE',pa:1e8,    cost:1e12, final:true},
+  {id:'sprink',  ic:'🌈', nm:'Sprinkles',        pa:50,     cost:600},
+  {id:'abacus',  ic:'🧮', nm:'Abacus',           pa:200,    cost:3000},
+  {id:'oven',    ic:'🔥', nm:'Big Oven',         pa:250,    cost:4000},
+  {id:'book',    ic:'📘', nm:'Maths Book',       pa:1200,   cost:20000},
+  {id:'milk',    ic:'🥛', nm:'Milk Fountain',    pa:1300,    cost:25000},
+  {id:'jar',     ic:'🫙', nm:'Giant Cookie Jar', pa:3500,   cost:70000},
+  {id:'star',    ic:'⭐', nm:"Teacher's Gold Star",pa:7000, cost:150000},
+  {id:'icing',   ic:'🧁', nm:'Rainbow Icing',    pa:6000,   cost:150000},
+  {id:'truck',   ic:'🚚', nm:'Cookie Truck',     pa:40000,  cost:1e6},
+  {id:'brain',   ic:'🧠', nm:'Big Brain',        pa:45000,  cost:1.2e6},
+  {id:'factory', ic:'🏭', nm:'Cookie Factory',   pa:200000, cost:6e6},
+  {id:'owl',     ic:'🦉', nm:'Professor Owl',    pa:250000, cost:8e6},
+  {id:'rocket',  ic:'🚀', nm:'Cookie Rocket',    pa:1.2e6, cost:4e7},
+  {id:'robot',   ic:'🤖', nm:'Maths Robot',      pa:1.7e6,  cost:6e7},
+  {id:'moon',    ic:'🌙', nm:'Moon Bakery',      pa:7e6,  cost:2.5e8},
+  {id:'diamond', ic:'💎', nm:'Diamond Cookie',   pa:2.5e7,    cost:1e9},
+  {id:'crown',   ic:'👑', nm:'Genius Crown',     pa:3.5e7,    cost:1.5e9},
+  {id:'volcano', ic:'🌋', nm:'Cookie Volcano',   pa:6e7,    cost:2.5e9},
+  {id:'planet',  ic:'🪐', nm:'Cookie Planet',    pa:1.2e8,    cost:5e9},
+  {id:'galaxy',  ic:'🌌', nm:'Cookie Galaxy',    pa:6.5e8,    cost:3e10},
+  {id:'wizard',  ic:'🧙', nm:'Number Wizard',    pa:8.5e8,  cost:4e10},
+  {id:'univ',    ic:'✨', nm:'Cookie Universe',  pa:3e9,  cost:1.5e11},
+  {id:'dragon',  ic:'🐉', nm:'Cookie Dragon',    pa:1e10,    cost:5e11},
+  {id:'golden',  ic:'🏆', nm:'THE GOLDEN COOKIE',pa:1e11,    cost:1e12, final:true},
 ];
 const PRICE_UP = 1.15;   // each one you buy costs 15% more than the last
 const BASE_ANSWER = 5;   // cookies for a right answer before any upgrades
@@ -46,7 +46,6 @@ function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catc
 const $ = id => document.getElementById(id);
 const owned = it => G.n[it.id] || 0;
 const price = it => Math.ceil(it.cost * Math.pow(PRICE_UP, owned(it)));
-const perSec = () => ITEMS.reduce((t, it) => t + owned(it) * (it.ps || 0), 0);
 const perAns = () => ITEMS.reduce((t, it) => t + owned(it) * (it.pa || 0), BASE_ANSWER);
 
 // ---------- numbers ----------
@@ -137,7 +136,7 @@ function renderShop(){
   for (const it of [ITEMS[ITEMS.length - 1], ...ITEMS.filter(it => !it.final).sort((a, b) => a.cost - b.cost)]) {
     const li = document.createElement('li');
     li.className = 'item' + (it.final ? ' final' : '');
-    const what = it.pa ? `+${fmtShort(it.pa)}<small>per answer</small>` : `+${fmtShort(it.ps)}<small>every second</small>`;
+    const what = `+${fmtShort(it.pa)}<small>per answer</small>`;
     li.innerHTML = `<div class="ic">${it.ic}</div><div><div class="nm">${it.nm}</div><div class="cost">🍪 <span></span></div></div><div class="fac">${what}</div><div class="bar"></div><div class="own"></div>`;
     li.addEventListener('click', () => buy(it, li));
     itemsEl.appendChild(li);
@@ -148,7 +147,6 @@ function renderShop(){
 function update(){
   countEl.textContent = fmt(G.cookies);
   $('perAns').textContent = fmt(perAns());
-  $('perSec').textContent = '+' + fmt(perSec());
   for (const it of ITEMS) {
     const c = price(it), can = G.cookies >= c;
     it.costEl.textContent = fmtShort(c);
@@ -277,11 +275,10 @@ $('reset').addEventListener('click', () => {
   $('hint').classList.remove('gone'); update(); nextQuestion();
 });
 
-// ---------- every frame: timer and baking ----------
+// ---------- every frame: the question timer ----------
 let last = performance.now(), uiT = 0, saveT = 0;
 function loop(now){
   const dt = Math.min(1, (now - last) / 1000); last = now;
-  G.cookies += perSec() * dt;
   if (!locked && Q) {
     qLeft -= dt;
     if (qLeft <= 0) { // too slow: no penalty, but the streak ends and the right answer is shown
@@ -297,12 +294,7 @@ function loop(now){
   if (saveT > 2) { saveT = 0; save(); }
   requestAnimationFrame(loop);
 }
-// a hidden tab doesn't run animation frames, so catch up when you come back (up to an hour)
-let hiddenAt = 0;
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { hiddenAt = Date.now(); save(); }
-  else if (hiddenAt) { G.cookies += perSec() * Math.min(3600, (Date.now() - hiddenAt) / 1000); hiddenAt = 0; last = performance.now(); update(); }
-});
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 addEventListener('pagehide', save);
 
 // ?shot=N gives N cookies and a few items (for screenshots)

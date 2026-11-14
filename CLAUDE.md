@@ -21,7 +21,7 @@ The games are independent and share no code.
   Harry's spec is `1_game_design.txt`.
 - `mega_cookie/` — "Mega Cookie" (started November 2026), a maths cookie game (Mum vetoed pure clicking as "brain
   rot"): a quick sum appears, click the cookie with the right answer of three. Buy items (each many times) that add
-  cookies per answer or per second, aim for THE GOLDEN COOKIE (+100 million per answer, costs 1 trillion). Split into `index.html`,
+  cookies per right answer, aim for THE GOLDEN COOKIE (+100 billion per answer, costs 1 trillion). Split into `index.html`,
   `style.css`, `game.js`. Harry asked for "Cookie Clicker" but that's an existing game's name, so it's called Mega Cookie.
 
 ## Working with Harry
@@ -124,9 +124,9 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - **Quiz**: `makeQuestion(level)` builds a sum and 3 options (wrong ones are near misses). Right = `perAns()` plus a
   speed bonus scaled by time left (`QTIMES` per level); wrong = lose `perAns()`; timeout = streak lost, no penalty.
   `G.level` (1–6) goes up after 8 right in a row, down after 3 wrong in a row. Keys 1/2/3 also answer.
-- `ITEMS` is the shop: base `cost`, adds `pa` per answer or `ps` per second. Bought many times; `price()` grows by
-  `PRICE_UP` (15%) per one owned. **Harry's rule: everything is plus, never times.** `loop()` runs the timer and adds
-  `perSec()`; a hidden tab catches up (max 1 hour) on return.
+- `ITEMS` is the shop: base `cost`, adds `pa` per right answer. Bought many times; `price()` grows by `PRICE_UP`
+  (15%) per one owned. **Harry's rules: everything is plus, never times, and cookies only come from right answers**
+  (no per-second baking). Tuned so a quick player reaches 1 trillion in roughly 40–60 minutes. `loop()` runs the timer.
 - State `G` (cookies, `n` = owned counts, right, level, muted, won) saves to `localStorage` (`megaCookie2`), so a reload
   keeps your score. `index.html` loads `style.css?v=N`/`game.js?v=N` and shows `vN` bottom-right: bump N every release
   so phones don't run a cached old version.
