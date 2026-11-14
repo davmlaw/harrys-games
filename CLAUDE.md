@@ -19,8 +19,9 @@ The games are independent and share no code.
 - `king_of_the_bins/` — "King of the Bins" (started November 2026), a night-time side-scrolling platformer: a raccoon
   knocks over metal bins, rummages for loot and dodges humans. Split into `index.html`, `style.css`, `game.js`.
   Harry's spec is `1_game_design.txt`.
-- `mega_cookie/` — "Mega Cookie" (started November 2026), a cookie clicker: click the cookie, buy items (each
-  many times) that bake cookies every second, aim for THE GOLDEN COOKIE (+100 million per click, costs 1 trillion). Split into `index.html`,
+- `mega_cookie/` — "Mega Cookie" (started November 2026), a maths cookie game (Mum vetoed pure clicking as "brain
+  rot"): a quick sum appears, click the cookie with the right answer of three. Buy items (each many times) that add
+  cookies per answer or per second, aim for THE GOLDEN COOKIE (+100 million per answer, costs 1 trillion). Split into `index.html`,
   `style.css`, `game.js`. Harry asked for "Cookie Clicker" but that's an existing game's name, so it's called Mega Cookie.
 
 ## Working with Harry
@@ -120,11 +121,15 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 
 ### mega_cookie (`game.js`)
 
-- `ITEMS` is the shop: each item has a base `cost` and adds `ps` cookies/second (Golden Cookie adds `pc` per click).
-  Items can be bought many times; `price()` grows by `PRICE_UP` (15%) per one owned. Harry wants plus, not times.
-  Tuned so a good player reaches 1 trillion in about an hour. `loop()` adds `perSec()` each frame; a hidden tab
-  catches up (max 1 hour) on return.
-- State `G` (cookies, `n` = owned counts, clicks, muted, won) saves to `localStorage` (`megaCookie2`). Sounds are Web Audio (`crunch`, `tone`).
+- **Quiz**: `makeQuestion(level)` builds a sum and 3 options (wrong ones are near misses). Right = `perAns()` plus a
+  speed bonus scaled by time left (`QTIMES` per level); wrong = lose `perAns()`; timeout = streak lost, no penalty.
+  `G.level` (1–6) goes up after 8 right in a row, down after 3 wrong in a row. Keys 1/2/3 also answer.
+- `ITEMS` is the shop: base `cost`, adds `pa` per answer or `ps` per second. Bought many times; `price()` grows by
+  `PRICE_UP` (15%) per one owned. **Harry's rule: everything is plus, never times.** `loop()` runs the timer and adds
+  `perSec()`; a hidden tab catches up (max 1 hour) on return.
+- State `G` (cookies, `n` = owned counts, right, level, muted, won) saves to `localStorage` (`megaCookie2`), so a reload
+  keeps your score. `index.html` loads `style.css?v=N`/`game.js?v=N` and shows `vN` bottom-right: bump N every release
+  so phones don't run a cached old version.
 - **Mobile**: CSS-only (`max-width:820px` portrait and `max-height:520px` landscape): the page fits the screen and only
   the shop list scrolls. The shop lists the Golden Cookie first, then the items in price order (`renderShop`).
 - `?shot=N` loads N cookies with a few items owned (for screenshots).

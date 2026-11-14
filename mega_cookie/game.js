@@ -1,32 +1,45 @@
 'use strict';
-// Mega Cookie: click the cookie, buy multipliers, get the Golden Cookie.
-// Every upgrade multiplies how many cookies one click gives you.
+// Mega Cookie: a maths game. A sum pops up and three cookies show answers.
+// Click the right cookie to win cookies (answer fast for a speed bonus), click a wrong one and you lose some.
+// Spend cookies in the shop on things that add cookies per right answer or bake cookies every second.
+// Everything is PLUS, never times (Harry's rule).
 
-// Every item can be bought lots of times. Each one bakes cookies for you every second
-// (the dearer it is, the more it bakes), and the price goes up a bit each time you buy one.
-// THE GOLDEN COOKIE is the big goal: it adds +100 million cookies to every click.
+// pa = + cookies per right answer, ps = + cookies every second
 const ITEMS = [
-  {id:'fingers', ic:'👆', nm:'Sticky Fingers',   ps:1,      cost:10},
+  {id:'pencil',  ic:'✏️', nm:'Sharp Pencil',     pa:5,      cost:25},
+  {id:'fingers', ic:'👆', nm:'Sticky Fingers',   ps:1,      cost:15},
   {id:'chips',   ic:'🍫', nm:'Extra Choc Chips', ps:5,      cost:100},
+  {id:'ruler',   ic:'📏', nm:'Magic Ruler',      pa:40,     cost:400},
   {id:'sprink',  ic:'🌈', nm:'Sprinkles',        ps:25,     cost:600},
+  {id:'abacus',  ic:'🧮', nm:'Abacus',           pa:250,    cost:3000},
   {id:'oven',    ic:'🔥', nm:'Big Oven',         ps:150,    cost:4000},
+  {id:'book',    ic:'📘', nm:'Maths Book',       pa:1500,   cost:20000},
   {id:'milk',    ic:'🥛', nm:'Milk Fountain',    ps:800,    cost:25000},
+  {id:'jar',     ic:'🫙', nm:'Giant Cookie Jar', ps:2000,   cost:70000},
+  {id:'star',    ic:'⭐', nm:"Teacher's Gold Star",pa:10000, cost:150000},
   {id:'icing',   ic:'🧁', nm:'Rainbow Icing',    ps:4000,   cost:150000},
   {id:'truck',   ic:'🚚', nm:'Cookie Truck',     ps:20000,  cost:1e6},
+  {id:'brain',   ic:'🧠', nm:'Big Brain',        pa:70000,  cost:1.2e6},
   {id:'factory', ic:'🏭', nm:'Cookie Factory',   ps:100000, cost:6e6},
+  {id:'owl',     ic:'🦉', nm:'Professor Owl',    pa:400000, cost:8e6},
   {id:'rocket',  ic:'🚀', nm:'Cookie Rocket',    ps:500000, cost:4e7},
+  {id:'robot',   ic:'🤖', nm:'Maths Robot',      pa:2.5e6,  cost:6e7},
   {id:'moon',    ic:'🌙', nm:'Moon Bakery',      ps:2.5e6,  cost:2.5e8},
   {id:'diamond', ic:'💎', nm:'Diamond Cookie',   ps:9e6,    cost:1e9},
+  {id:'crown',   ic:'👑', nm:'Genius Crown',     pa:2e7,    cost:1.5e9},
+  {id:'volcano', ic:'🌋', nm:'Cookie Volcano',   ps:2e7,    cost:2.5e9},
   {id:'planet',  ic:'🪐', nm:'Cookie Planet',    ps:4e7,    cost:5e9},
   {id:'galaxy',  ic:'🌌', nm:'Cookie Galaxy',    ps:2e8,    cost:3e10},
+  {id:'wizard',  ic:'🧙', nm:'Number Wizard',    pa:1.5e8,  cost:4e10},
   {id:'univ',    ic:'✨', nm:'Cookie Universe',  ps:7.5e8,  cost:1.5e11},
   {id:'dragon',  ic:'🐉', nm:'Cookie Dragon',    ps:2e9,    cost:5e11},
-  {id:'golden',  ic:'🏆', nm:'THE GOLDEN COOKIE',pc:1e8,    cost:1e12, final:true},
+  {id:'golden',  ic:'🏆', nm:'THE GOLDEN COOKIE',pa:1e8,    cost:1e12, final:true},
 ];
-const PRICE_UP = 1.15; // each one you buy costs 15% more than the last
+const PRICE_UP = 1.15;   // each one you buy costs 15% more than the last
+const BASE_ANSWER = 5;   // cookies for a right answer before any upgrades
 
 const SAVE_KEY = 'megaCookie2';
-let G = {cookies:0, n:{}, clicks:0, muted:false, won:false};
+let G = {cookies:0, n:{}, right:0, muted:false, won:false, level:1};
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s.cookies === 'number') G = Object.assign(G, s); } catch (e) {}
 function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch (e) {} }
 
@@ -34,7 +47,7 @@ const $ = id => document.getElementById(id);
 const owned = it => G.n[it.id] || 0;
 const price = it => Math.ceil(it.cost * Math.pow(PRICE_UP, owned(it)));
 const perSec = () => ITEMS.reduce((t, it) => t + owned(it) * (it.ps || 0), 0);
-const perClick = () => ITEMS.reduce((t, it) => t + owned(it) * (it.pc || 0), 1);
+const perAns = () => ITEMS.reduce((t, it) => t + owned(it) * (it.pa || 0), BASE_ANSWER);
 
 // ---------- numbers ----------
 const WORDS = [[1e21,'sextillion'],[1e18,'quintillion'],[1e15,'quadrillion'],[1e12,'trillion']];
@@ -76,15 +89,55 @@ const sBuy  = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .07, .16
 const sNope = () => tone(160, 0, .22, 'sawtooth', .07, 90);
 const sWin  = () => [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * .14, .3, 'square', .07));
 
+const sRight = () => { crunch(); tone(880, 0, .1, 'square', .05); tone(1320, .07, .14, 'square', .05); };
+const sFast  = () => [1047, 1319, 1568].forEach((f, i) => tone(f, .1 + i * .05, .1, 'triangle', .06));
+const sLevel = () => [523, 784, 1047, 1568].forEach((f, i) => tone(f, i * .09, .2, 'triangle', .08));
+
+// ---------- maths questions ----------
+// Level goes up after 8 right in a row and down after 3 wrong in a row.
+const MAX_LEVEL = 6;
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function makeQuestion(lv){
+  const kinds = [
+    ['add', 'sub'],                              // 1: + and − up to 20
+    ['add', 'sub', 'times'],                     // 2: + − to 50, easy times tables
+    ['add', 'sub', 'times', 'times'],            // 3: + − to 100, all tables to 10
+    ['add', 'sub', 'times', 'div'],              // 4: tables to 12, dividing
+    ['add', 'sub', 'times', 'div', 'big'],       // 5: bigger sums
+    ['add', 'sub', 'times', 'div', 'big', 'two'],// 6: two steps
+  ][lv - 1];
+  const k = pick(kinds), top = [20, 50, 100, 100, 500, 1000][lv - 1];
+  const tables = lv === 2 ? [2, 5, 10] : lv === 3 ? [2, 3, 4, 5, 6, 7, 8, 9, 10] : [2, 3, 4, 5, 6, 7, 8, 9, 11, 12];
+  let a, b, c, q, ans;
+  if (k === 'add') { a = rnd(1, top - 1); b = rnd(1, top - a); q = `${a} + ${b}`; ans = a + b; }
+  else if (k === 'sub') { a = rnd(2, top); b = rnd(1, a - 1); q = `${a} − ${b}`; ans = a - b; }
+  else if (k === 'times') { a = pick(tables); b = rnd(2, lv >= 4 ? 12 : 10); if (Math.random() < .5) [a, b] = [b, a]; q = `${a} × ${b}`; ans = a * b; }
+  else if (k === 'div') { b = pick(tables); ans = rnd(2, 12); q = `${b * ans} ÷ ${b}`; }
+  else if (k === 'big') { a = rnd(11, 25); b = rnd(3, 9); q = `${a} × ${b}`; ans = a * b; }
+  else { a = rnd(2, 9); b = rnd(2, 9); c = rnd(1, 20); const plus = Math.random() < .5;
+    if (!plus) c = rnd(1, a * b - 1);
+    q = `${a} × ${b} ${plus ? '+' : '−'} ${c}`; ans = a * b + (plus ? c : -c); }
+  // wrong answers that look tempting: off by one or two, off by ten, or a neighbour in the times table
+  const near = [1, -1, 2, -2, 10, -10];
+  if (k === 'times' || k === 'big') near.push(a, -a, b, -b);
+  if (k === 'div') near.push(1, -1);
+  const opts = new Set([ans]);
+  let tries = 0;
+  while (opts.size < 3 && tries++ < 50) { const w = ans + pick(near); if (w >= 0) opts.add(w); }
+  while (opts.size < 3) opts.add(ans + opts.size + 2);
+  return {q: q + ' = ?', ans, opts: [...opts].sort(() => Math.random() - .5)};
+}
+
 // ---------- screen ----------
 const countEl = $('count'), itemsEl = $('items');
 function renderShop(){
   itemsEl.innerHTML = '';
   // the Golden Cookie goal sits at the top so you always know what you're aiming for
-  for (const it of [ITEMS[ITEMS.length - 1], ...ITEMS.filter(it => !it.final)]) {
+  for (const it of [ITEMS[ITEMS.length - 1], ...ITEMS.filter(it => !it.final).sort((a, b) => a.cost - b.cost)]) {
     const li = document.createElement('li');
     li.className = 'item' + (it.final ? ' final' : '');
-    const what = it.final ? `+${fmtShort(it.pc)}<small>every click</small>` : `+${fmtShort(it.ps)}<small>every second</small>`;
+    const what = it.pa ? `+${fmtShort(it.pa)}<small>per answer</small>` : `+${fmtShort(it.ps)}<small>every second</small>`;
     li.innerHTML = `<div class="ic">${it.ic}</div><div><div class="nm">${it.nm}</div><div class="cost">🍪 <span></span></div></div><div class="fac">${what}</div><div class="bar"></div><div class="own"></div>`;
     li.addEventListener('click', () => buy(it, li));
     itemsEl.appendChild(li);
@@ -94,8 +147,8 @@ function renderShop(){
 }
 function update(){
   countEl.textContent = fmt(G.cookies);
-  $('perSec').textContent = fmt(perSec());
-  $('perClick').textContent = '+' + fmt(perClick());
+  $('perAns').textContent = fmt(perAns());
+  $('perSec').textContent = '+' + fmt(perSec());
   for (const it of ITEMS) {
     const c = price(it), can = G.cookies >= c;
     it.costEl.textContent = fmtShort(c);
@@ -104,27 +157,71 @@ function update(){
     it.el.classList.toggle('no', !can);
     it.bar.style.width = Math.min(100, G.cookies / c * 100) + '%';
   }
-  $('goal').textContent = G.won ? '🏆 You got the Golden Cookie! Keep clicking forever!' :
-    'Buy things that bake cookies for you, then get THE GOLDEN COOKIE!';
+  $('goal').textContent = G.won ? '🏆 You got the Golden Cookie! Keep going forever!' :
+    'Answer sums to win cookies, buy things, then get THE GOLDEN COOKIE!';
+  $('level').textContent = 'Level ' + G.level;
+  $('streak').textContent = streak >= 3 ? `🔥 ${streak} in a row` : '';
   document.body.classList.toggle('golden', !!G.won);
 }
 
-// ---------- clicking ----------
-const cookieBtn = $('cookie'), fx = $('fx');
-function clickCookie(x, y){
-  const p = perClick();
-  G.cookies += p; G.clicks++;
-  crunch();
-  cookieBtn.classList.add('squish'); setTimeout(() => cookieBtn.classList.remove('squish'), 60);
-  countEl.classList.remove('bump'); void countEl.offsetWidth; countEl.classList.add('bump');
-  const plus = document.createElement('div');
-  plus.className = 'plus'; plus.textContent = '+' + fmt(p);
-  plus.style.left = x + (Math.random() * 40 - 20) + 'px'; plus.style.top = y + 'px';
-  fx.appendChild(plus); setTimeout(() => plus.remove(), 900);
-  for (let i = 0; i < 5; i++) crumb(x, y);
-  if (G.clicks > 3) $('hint').classList.add('gone');
-  update();
+// ---------- answering ----------
+const QTIMES = [6, 6, 7, 7, 9, 10]; // seconds per question at each level
+let QTIME = 6;
+const answersEl = $('answers'), fx = $('fx');
+let Q = null, qLeft = 0, streak = 0, wrongRow = 0, locked = false;
+function nextQuestion(){
+  Q = makeQuestion(G.level); QTIME = QTIMES[G.level - 1];
+  qLeft = QTIME; locked = false;
+  const qEl = $('question'); qEl.textContent = Q.q; qEl.classList.remove('new'); void qEl.offsetWidth; qEl.classList.add('new');
+  answersEl.classList.remove('locked');
+  answersEl.innerHTML = '';
+  Q.opts.forEach((v, i) => {
+    const b = document.createElement('button');
+    b.className = 'ans'; b.setAttribute('aria-label', 'Answer ' + v);
+    b.innerHTML = `<svg viewBox="0 0 200 200" aria-hidden="true"><use href="#cookieArt"/></svg><b>${v}</b>`;
+    b.addEventListener('pointerdown', e => { e.preventDefault(); answer(v, b, e.clientX, e.clientY); });
+    b.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); const r = b.getBoundingClientRect(); answer(v, b, r.left + r.width / 2, r.top + r.height / 3); } });
+    answersEl.appendChild(b);
+  });
 }
+function floatText(text, x, y, cls){
+  const p = document.createElement('div');
+  p.className = 'plus' + (cls ? ' ' + cls : ''); p.textContent = text;
+  p.style.left = x + (Math.random() * 30 - 15) + 'px'; p.style.top = y + 'px';
+  fx.appendChild(p); setTimeout(() => p.remove(), 900);
+}
+function lockThen(ms){ locked = true; answersEl.classList.add('locked'); setTimeout(nextQuestion, ms); }
+function answer(v, btn, x, y){
+  if (locked) return;
+  if (v === Q.ans) {
+    const base = perAns(), fast = Math.round(base * qLeft / QTIME); // speed bonus: up to the same again
+    G.cookies += base + fast; G.right++;
+    streak++; wrongRow = 0;
+    sRight(); btn.classList.add('right');
+    floatText('+' + fmt(base), x, y);
+    if (fast > 0) { setTimeout(() => floatText('+' + fmt(fast) + ' ⚡', x, y - 40, 'fast'), 120); if (qLeft > QTIME / 2) sFast(); }
+    for (let i = 0; i < 8; i++) crumb(x, y);
+    if (streak % 8 === 0 && G.level < MAX_LEVEL) { G.level++; sLevel(); setTimeout(() => floatText('LEVEL ' + G.level + '!', innerWidth / 2, innerHeight / 2, 'fast'), 250); }
+    if (G.right > 3) $('hint').classList.add('gone');
+    lockThen(250);
+  } else {
+    const lose = Math.min(G.cookies, perAns());
+    G.cookies -= lose; streak = 0; wrongRow++;
+    sNope(); btn.classList.add('wrong');
+    floatText(lose > 0 ? '−' + fmt(lose) : 'Oops!', x, y, 'bad');
+    for (const b of answersEl.children) if (+b.querySelector('b').textContent === Q.ans) b.classList.add('right'); // show the right one
+    if (wrongRow >= 3 && G.level > 1) { G.level--; wrongRow = 0; }
+    lockThen(900);
+  }
+  countEl.classList.remove('bump'); void countEl.offsetWidth; countEl.classList.add('bump');
+  update(); save();
+}
+document.addEventListener('keydown', e => { // keys 1, 2, 3 pick a cookie
+  const i = ['1', '2', '3'].indexOf(e.key); if (i < 0 || e.repeat) return;
+  const b = answersEl.children[i]; if (!b) return;
+  const r = b.getBoundingClientRect(); answer(Q.opts[i], b, r.left + r.width / 2, r.top + r.height / 3);
+});
+
 function fling(el, x, y, vx, vy, life, spin){
   fx.appendChild(el);
   let t = 0, r = Math.random() * 360; const t0 = performance.now();
@@ -151,12 +248,6 @@ function confetti(){
   }
 }
 
-cookieBtn.addEventListener('pointerdown', e => { e.preventDefault(); clickCookie(e.clientX, e.clientY); });
-cookieBtn.addEventListener('keydown', e => {
-  if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) {
-    e.preventDefault(); const r = cookieBtn.getBoundingClientRect(); clickCookie(r.left + r.width / 2, r.top + r.height / 3);
-  }
-});
 
 // ---------- buying ----------
 function buy(it, li){
@@ -171,7 +262,7 @@ function buy(it, li){
   if (it.final && !G.won) {
     G.won = true; save(); update();
     sWin(); confetti(); setTimeout(confetti, 700);
-    $('winPer').textContent = fmt(perClick()); $('win').hidden = false;
+    $('winPer').textContent = fmt(perAns()); $('win').hidden = false;
   } else sBuy();
 }
 $('winOk').addEventListener('click', () => { $('win').hidden = true; });
@@ -182,15 +273,25 @@ function showMute(){ muteBtn.textContent = G.muted ? '🔇' : '🔊'; }
 muteBtn.addEventListener('click', () => { G.muted = !G.muted; showMute(); save(); });
 $('reset').addEventListener('click', () => {
   if (!confirm('Start again from 0 cookies?')) return;
-  G = {cookies:0, n:{}, clicks:0, muted:G.muted, won:false}; save();
-  $('hint').classList.remove('gone'); update();
+  G = {cookies:0, n:{}, right:0, muted:G.muted, won:false, level:1}; streak = 0; save();
+  $('hint').classList.remove('gone'); update(); nextQuestion();
 });
 
-// ---------- baking every second ----------
+// ---------- every frame: timer and baking ----------
 let last = performance.now(), uiT = 0, saveT = 0;
 function loop(now){
   const dt = Math.min(1, (now - last) / 1000); last = now;
   G.cookies += perSec() * dt;
+  if (!locked && Q) {
+    qLeft -= dt;
+    if (qLeft <= 0) { // too slow: no penalty, but the streak ends and the right answer is shown
+      qLeft = 0; streak = 0;
+      for (const b of answersEl.children) if (+b.querySelector('b').textContent === Q.ans) b.classList.add('right');
+      tone(300, 0, .15, 'triangle', .05, 200);
+      lockThen(800);
+    }
+  }
+  const bar = $('timeBar'); bar.style.transform = `scaleX(${qLeft / QTIME})`; bar.classList.toggle('slow', qLeft < QTIME / 2);
   uiT += dt; saveT += dt;
   if (uiT > .1) { uiT = 0; update(); }
   if (saveT > 2) { saveT = 0; save(); }
@@ -206,9 +307,10 @@ addEventListener('pagehide', save);
 
 // ?shot=N gives N cookies and a few items (for screenshots)
 const shot = new URLSearchParams(location.search).get('shot');
-if (shot) { G = {cookies:+shot || 0, n:{fingers:12, chips:6, sprink:3, oven:1}, clicks:9, muted:true, won:false}; $('hint').classList.add('gone'); }
+if (shot) { G = {cookies:+shot || 0, n:{pencil:3, fingers:8, chips:4, ruler:1}, right:20, muted:true, won:false, level:3}; streak = 5; $('hint').classList.add('gone'); }
 
 showMute();
 renderShop();
-if (G.clicks > 3) $('hint').classList.add('gone');
+if (G.right > 3) $('hint').classList.add('gone');
+nextQuestion();
 requestAnimationFrame(loop);
