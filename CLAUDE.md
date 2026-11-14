@@ -97,10 +97,13 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
   flying lids and falling bins stun them too. Neighbourhood Watch patrols (`spawnWatch`, `G.tWatch`) walk in from
   ahead. Every few bins (`G.nextVan`) an Animal Control van drives in from ahead with a faster
   `catcher` with a net. Touch (or net) = `caught()` unless Stinky Cheese / Butter Fur / Ninja Mask saves you.
+- **Mobile mode** (`TOUCH`: `pointer: coarse` only, so touchscreen laptops keep the desktop layout): `body.touch` makes
+  the stage fill the screen, a floating joystick (`joy`, left half) plus Jump/Rummage buttons overlay it, and portrait
+  shows a turn-sideways message. Desktop layout and keyboard controls are unchanged.
 - **Modes**: `title` → `play` → `caught` (cage drops) → `ending` (mugshot, stripes poof on, bars slam, `#endUI` card).
   Night lighting is an offscreen dark layer with holes cut for lamps/windows/torches (`drawLighting`).
 - **Testing**: `index.html?auto` plays itself (runs right, jumps humans, rummages); `?shot=end` jumps to the ending;
-  `?shot=title` holds the title. These use a timer loop so headless `--virtual-time-budget` screenshots advance.
+  `?shot=title` holds the title; `?mobile` forces mobile mode. These use a timer loop so headless `--virtual-time-budget` screenshots advance.
 
 ### food_wars2 (`index.html`)
 

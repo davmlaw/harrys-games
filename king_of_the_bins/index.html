@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>King of the Bins</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@700;900&display=swap">
@@ -32,15 +32,15 @@
     </div>
 
     <div id="touch" aria-hidden="true">
-      <div class="pad dpad">
-        <button data-k="up" class="u">▲</button><button data-k="left" class="l">◀</button>
-        <button data-k="right" class="r">▶</button><button data-k="down" class="d">▼</button>
-      </div>
-      <div class="pad">
-        <button data-k="act">🔍</button><button data-k="jump">⤒</button>
+      <div id="joyZone"><div id="joyBase"><div id="joyKnob"></div></div></div>
+      <div class="btns">
+        <button data-k="act" class="act">🔍<small>RUMMAGE</small></button>
+        <button data-k="jump" class="jump">⤒<small>JUMP</small></button>
       </div>
     </div>
   </div>
+
+  <div id="rotate"><div>🦝📱↻</div><p>Turn your phone sideways to play!</p></div>
 
   <div id="help">
     <span><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> move</span>

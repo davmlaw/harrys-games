@@ -16,7 +16,8 @@ const pick = a => a[Math.floor(Math.random() * a.length)];
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sgn = v => v < 0 ? -1 : 1;
 const hash = n => { n = Math.sin(n * 127.1 + 311.7) * 43758.5453; return n - Math.floor(n); };
-const TOUCH = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
+// mobile mode is for touch-first devices only (phones/tablets); ?mobile forces it for testing
+const TOUCH = Q.has('mobile') || matchMedia('(pointer: coarse)').matches;
 const FONT = s => `${s}px Bangers, Impact, sans-serif`;
 
 // ---------------------------------------------------------------- tunables
@@ -150,11 +151,46 @@ document.querySelectorAll('#touch button').forEach(b => {
   b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off);
   b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
 });
+// floating joystick: put your thumb down anywhere on the left half and drag
+const joy = { id: null, x: 0, y: 0, cx: 0, cy: 0 };
+(() => {
+  const zone = document.getElementById('joyZone'), base = document.getElementById('joyBase'), knob = document.getElementById('joyKnob');
+  const move = e => {
+    const R = base.offsetWidth / 2 || 1;
+    let dx = (e.clientX - joy.cx) / R, dy = (e.clientY - joy.cy) / R;
+    const len = Math.hypot(dx, dy); if (len > 1) { dx /= len; dy /= len; }
+    joy.x = dx; joy.y = dy;
+    knob.style.transform = `translate(${dx * R}px, ${dy * R}px)`;
+  };
+  zone.addEventListener('pointerdown', e => {
+    if (joy.id !== null) return;
+    e.preventDefault(); ac();
+    joy.id = e.pointerId; zone.setPointerCapture(e.pointerId);
+    const r = zone.getBoundingClientRect();
+    joy.cx = e.clientX; joy.cy = e.clientY;
+    base.style.left = (e.clientX - r.left) + 'px'; base.style.top = (e.clientY - r.top) + 'px';
+    base.classList.add('active'); move(e);
+  });
+  zone.addEventListener('pointermove', e => { if (e.pointerId === joy.id) move(e); });
+  const end = e => {
+    if (e.pointerId !== joy.id) return;
+    joy.id = null; joy.x = joy.y = 0;
+    base.classList.remove('active'); base.style.left = base.style.top = ''; knob.style.transform = '';
+  };
+  zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end);
+})();
+function goFullscreen() {
+  if (!TOUCH || AUTO || document.fullscreenElement) return;
+  try {
+    const p = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
+    p?.then(() => screen.orientation?.lock?.('landscape')).catch(() => { });
+  } catch (e) { }
+}
 const muteBtn = document.getElementById('mute');
 function toggleMute() { muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; }
 muteBtn.onclick = () => { ac(); toggleMute(); muteBtn.blur(); };
-document.getElementById('playBtn').onclick = () => { ac(); startGame(); };
-document.getElementById('againBtn').onclick = () => { ac(); startGame(); };
+document.getElementById('playBtn').onclick = () => { ac(); goFullscreen(); startGame(); };
+document.getElementById('againBtn').onclick = () => { ac(); goFullscreen(); startGame(); };
 
 // ---------------------------------------------------------------- state
 let mode = 'title', T = 0;
@@ -522,6 +558,11 @@ function supports() {
 }
 function updatePlayer(dt) {
   let ax = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), az = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+  if (joy.id !== null) {
+    // joystick: small dead zone, then full speed comes quickly so it doesn't feel sluggish
+    ax = Math.abs(joy.x) < .2 ? 0 : clamp(joy.x * 1.5, -1, 1);
+    az = Math.abs(joy.y) < .3 ? 0 : clamp(joy.y * 1.5, -1, 1);
+  }
   for (const k in P.pw) P.pw[k] = Math.max(0, P.pw[k] - dt);
   P.inv = Math.max(0, P.inv - dt);
   P.prevH = P.h;
@@ -536,7 +577,7 @@ function updatePlayer(dt) {
   const fast = P.pw.zoom > 0 ? CFG.zoomMul : 1;
   P.vx += (ax * CFG.run * fast - P.vx) * Math.min(1, dt * (P.onGround ? 12 : 6));
   P.vz += (az * CFG.zrun * fast - P.vz) * Math.min(1, dt * 14);
-  if (ax) P.face = ax;
+  if (ax) P.face = sgn(ax);
   if (P.pw.zoom > 0 && Math.abs(P.vx) > 200 && Math.random() < .5) parts.push({ x: P.x - P.face * 20, y: P.y - rand(5, 30), vx: -P.face * 60, vy: 0, life: .3, t: 0, r: 3, col: '#ff6a3a', k: 'spark' });
 
   if (pressed.jump && !P.rum) P.jbuf = .13;
