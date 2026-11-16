@@ -162,7 +162,7 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
   counted in questions, `G.qn`); wrong answers drop 2 boxes and come back in 2 questions. Box ≥3 = gold ⭐ on the grid;
   a fully gold row = +100 bricks once (`G.rows`). `?` bricks on the track ask in slow-mo (`SLOWMO`); right = turbo + 5 bricks.
 - `UPG` is the shop; each part is drawn on the car in `drawCar` (works for the garage preview and thumbnails too).
-- State `G` saves to `localStorage` (`brickRacers1`). `index.html` loads `style.css?v=N`/`game.js?v=N`: bump N each release.
+- State `G` saves to `localStorage` (`brickRacers1`). The title screen has a two-tap "Start again from zero" button (`#resetBtn`) that wipes it. `index.html` loads `style.css?v=N`/`game.js?v=N`: bump N each release.
 - **Mobile** copies King of the Bins: `TOUCH`, floating joystick (push the way you want to go), NITRO/FLY buttons.
 - **Testing**: `?auto` plays itself forever (race, pit, garage buys, next race; `&right=60` sets how many answers it gets right, results are logged to the console); `?shot=garage|race|fly|pit`, `&track=N`,
   `&mobile`. Timer loop so headless `--virtual-time-budget` screenshots advance. A full auto race is ~100–140s virtual time.

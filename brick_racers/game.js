@@ -856,6 +856,18 @@ function buildTitle() {
   $('goBtn').textContent = G.races ? 'TO THE GARAGE! 🛠️' : "LET'S RACE! 🏁";
 }
 $('goBtn').onclick = () => { ac(); goFullscreen(); G.races ? openGarage() : startRace(); };
+// start again: wipes the races, bricks, car parts and times tables. You have to tap twice so it can't happen by accident.
+$('resetBtn').hidden = !(G.races || G.qn || G.bricks);
+let resetT = 0;
+$('resetBtn').onclick = e => {
+  const b = e.currentTarget;
+  if (!b.classList.contains('sure')) {
+    b.classList.add('sure'); b.textContent = '⚠️ Wipe everything? Tap again to say yes';
+    clearTimeout(resetT); resetT = setTimeout(() => { b.classList.remove('sure'); b.textContent = '🗑️ Start again from zero'; }, 4000);
+    return;
+  }
+  const muted = G.muted; G = fresh(); G.muted = muted; save(); location.reload();
+};
 
 // ---------------------------------------------------------------- drawing cars
 function bodyPath(g, sh, L, Wd) {

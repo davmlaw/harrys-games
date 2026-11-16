@@ -59,6 +59,9 @@ button.big:disabled { filter: grayscale(.8) brightness(.8); cursor: default; }
   background: inherit; border: .3cqw solid var(--ink); border-bottom: 0; border-radius: .5cqw .5cqw 0 0;
 }
 .pickMsg { font-family: Bangers, Impact, sans-serif; font-size: 3cqw; letter-spacing: .08em; margin: 1cqw 0; text-shadow: .2cqw .2cqw 0 var(--ink); }
+#resetBtn { margin-top: 1.6cqw; font: inherit; font-size: 1.7cqw; font-weight: 800; padding: .4cqw 1.6cqw; background: rgba(255,255,255,.85);
+  color: var(--ink); border: .3cqw solid var(--ink); border-radius: 99px; cursor: pointer; }
+#resetBtn.sure { background: #ff5a36; color: #fff; }
 #carPick { display: flex; gap: 1.5cqw; justify-content: center; }
 .carBtn {
   background: var(--paper); color: var(--ink); border: .4cqw solid var(--ink); border-radius: 1.2cqw; padding: .6cqw .6cqw 1cqw;
