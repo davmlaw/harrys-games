@@ -27,6 +27,9 @@ The games are independent and share no code.
 - `brick_racers/` — "Brick Racers" (started November 2026), a top-down car racing game in a toy-brick world (never
   call it "Lego"; it's a real brand) mixed with times tables. Race 3 laps, then a Pit Stop maths quiz, then the garage to
   buy car upgrades (ending in jet engines so the car flies). Split into `index.html`, `style.css`, `game.js`.
+- `park_dodgeball/` — "Park Dodgeball" (started November 2026), a top-down free-for-all dodgeball game on a park field
+  (Harry and Dad play it for real). Two sticks: run, and point your hands. A flying ball that meets your hands is a catch.
+  Split into `index.html`, `style.css`, `game.js`.
 
 ## Working with Harry
 
@@ -89,8 +92,8 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - **Base** blocks come from `wantedCells(b)` (main room + extra rooms to the left); `syncCells` + `buildCells`
   animate any new/changed blocks. Bombs always destroy the whole base (`b.gone`); rebuilding is a day action
   costing `REBUILD_WOOD`/`REBUILD_STONE`, and until then nights run through `noBaseNight()`.
-- **Difficulty**: `armourFor(night)` raises baddie armour a tier every 2 nights; the sword tier (`SWORDS`) must be
-  at least the armour tier. Survivors you turn away go into `G.rejected` and may come back as the baddie.
+- **Difficulty**: `armourFor(night)` raises the zombie's armour a tier every 2 nights; the sword tier (`SWORDS`) must be
+  at least the armour tier. Survivors you turn away go into `G.rejected` and may come back as the zombie (the baddie is a zombie with a bat: Harry's rule, no knives).
 - **World** is a column heightmap (`gh(c)`, block size `B`=30); `oreAt(c,r)` places iron/crystal in the stone.
   `SPOTS` are the build sites. The camera zooms by `Z` and tracks `S.cam.focus` / `S.cam.focusY`.
 - **Testing**: `index.html?auto=y,2,2,1` plays itself, answering each question in turn (y/n or menu number;
@@ -149,7 +152,7 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
   `G.races`. Car progress (`prog`) comes from the nearest sample each frame (wrapped delta), so laps/positions just work and
   corner-cutting over grass counts. Off the road (`TW` half-width) = half speed unless Glider Wings.
 - **Physics** (`physics`): arcade forward/lateral split with `grip`; stats from `statsFor` (player = `BASE` + upgrades,
-  rivals scale with `G.races` plus a mild rubber band `c.rb`). Car-car collisions are circles with mass (Crash Bumper);
+  rivals are built from the player's own stats × `RIVAL_K`, plus a Mario-Kart style rubber band in `stepRace`: `c.rb` speed-up and extra boosts the further behind they are, none when ahead, so you need maths turbos to win). Car-car collisions are circles with mass (Crash Bumper);
   hard hits spin the lighter car and burst brick particles. Flying cars (`alt`) skip collisions and grass.
 - **Maths brain**: facts are unordered pairs `fkey(a,b)` (so 3×4 fills both grid cells), b 2–12 (ones don't count). Tables
   unlock in `ORDER` (2, 10, 5, 3, 4, 11, 9, 6, 8, 12, 7) once the newest is going well. Leitner boxes (`b`, intervals `IV`
@@ -158,8 +161,21 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - `UPG` is the shop; each part is drawn on the car in `drawCar` (works for the garage preview and thumbnails too).
 - State `G` saves to `localStorage` (`brickRacers1`). `index.html` loads `style.css?v=N`/`game.js?v=N`: bump N each release.
 - **Mobile** copies King of the Bins: `TOUCH`, floating joystick (push the way you want to go), NITRO/FLY buttons.
-- **Testing**: `?auto` plays itself forever (race, pit, garage buys, next race); `?shot=garage|race|fly|pit`, `&track=N`,
+- **Testing**: `?auto` plays itself forever (race, pit, garage buys, next race; `&right=60` sets how many answers it gets right, results are logged to the console); `?shot=garage|race|fly|pit`, `&track=N`,
   `&mobile`. Timer loop so headless `--virtual-time-budget` screenshots advance. A full auto race is ~100–140s virtual time.
+
+### park_dodgeball (`game.js`)
+
+- **Controls**: touch = two floating sticks drawn on the canvas (left half `move`, right half `aim`; letting go of the aim
+  stick throws). Desktop = WASD/arrows, mouse points the hands, click/Space throws. `control(p)` reads them.
+- **The catch rule** is `ballMeetsPlayer`: when a live ball touches a body, compare the angle to the ball with `p.hand`.
+  Within `CFG.CATCH_ARC` (1/8 of a circle) and empty hands = catch (thrower loses a heart); holding a ball = block;
+  otherwise a hit. Balls are only "live" for `CFG.FLY` px or until they touch the trees; dead balls get picked up by walking over them.
+- `G.balls` holds only balls not in hands (a held ball is just `p.ball = true`). 3 hearts each, last one standing wins.
+- **AI** (`think`): fetch a ball, pick a target, hold the ball up for a wind-up (red ring = warning), throw with aim error.
+  On an incoming ball it rolls catch / dodge / "oops" from `DIFF[level]`. Tunables are in `CFG` and `DIFF`.
+- The title screen runs a 6-player AI demo behind the menu (`G.demo`). Settings save to `localStorage` (`parkDodgeball1`).
+- **Testing**: `?auto` plays itself over and over (logs each result to the console), `&n=6`, `&diff=hard`, `&mobile`. Bump `?v=N` each release.
 
 ### food_wars2 (`index.html`)
 
