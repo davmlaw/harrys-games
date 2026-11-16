@@ -30,6 +30,9 @@ The games are independent and share no code.
 - `park_dodgeball/` — "Park Dodgeball" (started November 2026), a top-down free-for-all dodgeball game on a park field
   (Harry and Dad play it for real). Two sticks: run, and point your hands. A flying ball that meets your hands is a catch.
   Split into `index.html`, `style.css`, `game.js`.
+- `times_table_soccer/` — "Times Table Soccer" (started November 2026), top-down 6-a-side soccer mixed with times tables
+  (never call it "FIFA"; it's a real brand). You pick goalie / defence / midfield / striker and control that one player. Every
+  tackle, dribble, shot and save is a 5-second times-table question in slow motion. Split into `index.html`, `style.css`, `game.js`.
 
 ## Working with Harry
 
@@ -181,6 +184,26 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - **Trees option** (`SET.trees`): a few random trunks in `G.trees` block players and balls (leaves are drawn see-through).
 - The title screen runs a 6-player AI demo behind the menu (`G.demo`). Settings save to `localStorage` (`parkDodgeball1`).
 - **Testing**: `?auto` plays itself over and over (logs each result to the console), `&n=6`, `&diff=hard`, `&trees`, `&zt=6` (first line move after 6s), `&mobile`. Bump `?v=N` each release.
+
+### times_table_soccer (`game.js`)
+
+- **You are one player** (`G.human`, team 0 "Blues", shooting right); everyone else is AI. `FORM` is the formation; `teamThink`
+  picks chasers (`CFG.PRESS` = 3 chase YOU, 2 chase a computer player) and slides the rest with the ball; `carrierAI` dribbles /
+  passes / shoots; `keeperAI` guards the line. Teammates like passing to you, and PASS without the ball shouts for it (`G.call`).
+- **Duels are the maths** (`startDuel(type, me, other)`, `answer(i)`): `dribble` (they touch you while you have the ball),
+  `tackle` (you touch their player with the ball), `shoot` (you press shoot) and `save` (they shoot while you are the goalie).
+  Time slows to `CFG.SLOW` (`G.ts`) for `CFG.QTIME` = 5 seconds. Right = win it (quick right answer on a shot = SUPER SHOT);
+  wrong or too slow = lose it. Computer v computer contacts are a dice roll (`D.tk`) in `contacts()`.
+- **Ball**: `G.ball.owner` dribbles it; free balls slow with `CFG.DRAG` and bounce off the edges (no throw-ins or corners).
+  A shot is `hot`: it flies past everyone except goalies. Goals only count from a free ball crossing the line in the goal mouth.
+- **Match**: `CFG.MATCH` seconds (the clock stops during questions), a draw goes to golden goal. `DIFF` tunes the other team,
+  `MATES` your own computer players.
+- **Maths brain** is copied from Brick Racers (`ORDER`, Leitner boxes, `nextFact`/`answerFact`), saved with the settings in `M`
+  (`localStorage` `timesTableSoccer1`). A brand-new player starts from their Brick Racers tables if there are any.
+- The title screen runs an AI v AI demo (`newMatch(null)`). Mobile copies Park Dodgeball (one floating stick + SHOOT/PASS buttons).
+- **Testing**: `?auto` plays itself over and over (logs goals and results to the console), `&right=75` (percent of answers it
+  gets right), `&pos=gk|def|mid|str`, `&diff=hard`, `&tables=6`, `&hold` (freeze on the first question, for screenshots),
+  `&mobile`. Bump `?v=N` each release.
 
 ### food_wars2 (`index.html`)
 

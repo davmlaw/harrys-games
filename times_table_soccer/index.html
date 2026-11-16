@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Times Table Soccer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@600;800&display=swap">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <header><h1>Times Table Soccer</h1></header>
+
+  <div id="stage">
+    <canvas id="cv"></canvas>
+
+    <div id="mbar">
+      <button id="quitBtn" title="Back to the menu">✕</button>
+      <button id="muteBtn" title="Sound">🔊</button>
+      <button id="fsBtn" title="Full screen">⛶</button>
+    </div>
+
+    <div id="toast"></div>
+
+    <!-- the maths question (tackle, dribble, shoot, save) -->
+    <div id="quiz">
+      <div id="qTitle">TACKLE!</div>
+      <div id="qText">6 × 7</div>
+      <div id="qOpts"><button></button><button></button><button></button></div>
+      <div id="qBar"><i></i></div>
+    </div>
+
+    <!-- phone buttons -->
+    <button id="passBtn" class="pad">PASS</button>
+    <button id="shootBtn" class="pad">SHOOT</button>
+
+    <div id="titleUI" class="card">
+      <a class="home" href="../index.html">← Harry's Games</a>
+      <h2>Times Table Soccer</h2>
+      <p class="how">When players <b>bump into each other</b>, time goes slow and a <b>times table</b> pops up. You have <b>5 seconds</b>!
+        Get it right to <b>dribble past</b>, <b>win the tackle</b>, <b>save</b>, or <b>smash a shot</b> at goal.</p>
+      <p class="how touchOnly">👈 Left thumb: <b>run</b> &nbsp; 👉 Buttons: <b>SHOOT</b> and <b>PASS</b></p>
+      <p class="how deskOnly"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <b>run</b> &nbsp; <kbd>Space</kbd> <b>shoot</b> &nbsp; <kbd>X</kbd> <b>pass</b> &nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> <b>answer</b></p>
+      <div class="row"><span class="lab">You are</span><div id="pBtns" class="opts"></div></div>
+      <div class="row"><span class="lab">Level</span><div id="dBtns" class="opts"></div></div>
+      <button id="playBtn" class="big">KICK OFF!</button>
+    </div>
+
+    <div id="endUI" class="card">
+      <h2 id="endTitle"></h2>
+      <p id="endText"></p>
+      <div class="row">
+        <button id="againBtn" class="big">Play again</button>
+        <button id="menuBtn" class="big alt">Menu</button>
+      </div>
+    </div>
+
+    <div id="ver">v1</div>
+  </div>
+
+  <div id="rotate">
+    <div class="phone">📱</div>
+    <p>Turn your phone sideways to play!</p>
+    <button id="anyway" class="anyway">Play this way anyway</button>
+  </div>
+
+  <div id="help">
+    <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows: run</span>
+    <span><kbd>Space</kbd>: shoot</span>
+    <span><kbd>X</kbd>: pass (or shout for the ball)</span>
+    <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>: answer</span>
+  </div>
+</div>
+<script src="game.js?v=1"></script>
+</body>
+</html>
