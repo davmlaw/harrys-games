@@ -174,8 +174,12 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 - `G.balls` holds only balls not in hands (a held ball is just `p.ball = true`). 3 hearts each, last one standing wins.
 - **AI** (`think`): fetch a ball, pick a target, hold the ball up for a wind-up (red ring = warning), throw with aim error.
   On an incoming ball it rolls catch / dodge / "oops" from `DIFF[level]`. Tunables are in `CFG` and `DIFF`.
+- **Anti-turtle rules**: a held ball pops out after `CFG.HOLD` (5s). The referee moves play in through the chalk-line
+  rectangles in `ZONES` every `CFG.SHRINK_EVERY` seconds (yellow line + whistle for `CFG.WARN` seconds first); fully
+  crossing the active line costs a heart and bumps you back in. AI is steered to stay inside; stray balls roll back in.
+- **Trees option** (`SET.trees`): a few random trunks in `G.trees` block players and balls (leaves are drawn see-through).
 - The title screen runs a 6-player AI demo behind the menu (`G.demo`). Settings save to `localStorage` (`parkDodgeball1`).
-- **Testing**: `?auto` plays itself over and over (logs each result to the console), `&n=6`, `&diff=hard`, `&mobile`. Bump `?v=N` each release.
+- **Testing**: `?auto` plays itself over and over (logs each result to the console), `&n=6`, `&diff=hard`, `&trees`, `&zt=6` (first line move after 6s), `&mobile`. Bump `?v=N` each release.
 
 ### food_wars2 (`index.html`)
 

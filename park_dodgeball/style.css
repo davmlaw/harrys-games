@@ -66,3 +66,5 @@ body.touch #stage { width: min(100vw, calc(100dvh * 16 / 9)); border: 0; border-
 body:not(.title):not(.over) #quitBtn { display: block; }
 header a { color: #fff; font-weight: 800; }
 #titleUI h2 { margin-top: 3.4cqw; }
+.lab.l2 { width: auto; margin-left: 2cqw; }
+#titleUI { width: 78cqw; }
