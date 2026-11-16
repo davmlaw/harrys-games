@@ -57,13 +57,14 @@ const KIDS = [
 const SKINS = ['#ffd9b3', '#f1c27d', '#c68642', '#8d5524', '#ffe0bd'];
 
 // ---------- saved settings ----------
-const SET = Object.assign({ n: 4, diff: 'medium', muted: false, trees: false }, (() => {
+const SET = Object.assign({ n: 4, diff: 'medium', muted: false, trees: false, shrink: true }, (() => {
   try { return JSON.parse(localStorage.getItem('parkDodgeball1')) || {}; } catch (e) { return {}; }
 })());
 const saveSet = () => { try { localStorage.setItem('parkDodgeball1', JSON.stringify(SET)); } catch (e) { } };
 if (Q.has('n')) SET.n = clamp(+Q.get('n') || 4, 2, 8);
 if (DIFF[Q.get('diff')]) SET.diff = Q.get('diff');
 if (Q.has('trees')) SET.trees = true;
+if (Q.has('shrink')) SET.shrink = Q.get('shrink') !== '0';
 
 // ---------- sound ----------
 let AC = null;
@@ -314,7 +315,7 @@ function step(dt) {
   if (G.ready > 0) { G.ready -= dt; if (G.ready <= 0 && !G.demo) SFX.go(); }
   const frozen = G.ready > 0;
   // the referee moves the line in
-  if (!frozen && G.stage < ZONES.length - 1 && alive().length > 1) {
+  if (SET.shrink && !frozen && G.stage < ZONES.length - 1 && alive().length > 1) {
     G.zt -= dt;
     if (!G.warn && G.zt <= CFG.WARN) { G.warn = true; say(G.ref.x, G.ref.y + 34, 'MOVE IN!', '#ffd43b', true); if (!G.demo) SFX.whistle(); }
     if (G.zt <= 0) { G.stage++; G.zt = CFG.SHRINK_EVERY; G.warn = false; if (!G.demo) SFX.whistle(); }
@@ -553,13 +554,13 @@ function draw() {
   ctx.save();
   if (G.shake > 0) ctx.translate(rand(-1, 1) * G.shake * 16, rand(-1, 1) * G.shake * 16);
   ctx.drawImage(park, 0, 0, W, H);
-  drawZones();
+  if (SET.shrink) drawZones();
   for (const b of G.balls) if (!b.live) drawBall(b);
   for (const t of G.trees) {
     ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.arc(t.x + 7, t.y + 10, t.r, 0, TAU); ctx.fill();
     ctx.fillStyle = '#7a4f24'; ctx.strokeStyle = '#3d2710'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(t.x, t.y, CFG.TR - 2, 0, TAU); ctx.fill(); ctx.stroke();
   }
-  drawRef();
+  if (SET.shrink) drawRef();
   for (const p of alive().sort((a, b) => a.y - b.y)) drawPlayer(p);
   for (const b of G.balls) if (b.live) drawBall(b);
   ctx.globalAlpha = .5;   // leaves: see-through so you can still spot who's hiding under them
@@ -596,6 +597,7 @@ function optButtons(id, list, key) {
   }
 }
 optButtons('nBtns', [2, 3, 4, 5, 6, 7, 8].map(n => [n, n]), 'n');
+optButtons('sBtns', [[false, 'No'], [true, 'Yes']], 'shrink');
 optButtons('tBtns', [[false, 'No'], [true, 'Yes']], 'trees');
 optButtons('dBtns', [['easy', 'Easy'], ['medium', 'Medium'], ['hard', 'Hard']], 'diff');
 const ORD = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];

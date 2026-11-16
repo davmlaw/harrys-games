@@ -68,3 +68,7 @@ header a { color: #fff; font-weight: 800; }
 #titleUI h2 { margin-top: 3.4cqw; }
 .lab.l2 { width: auto; margin-left: 2cqw; }
 #titleUI { width: 78cqw; }
+#titleUI { padding-top: 1.2cqw; padding-bottom: 1.6cqw; }
+#titleUI .row { margin-top: 1cqw; }
+#titleUI button.big { margin-top: 1.1cqw; }
+#titleUI h2 { font-size: 6cqw; }
