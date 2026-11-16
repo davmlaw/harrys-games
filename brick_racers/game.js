@@ -6,7 +6,7 @@ const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 const W = 960, H = 540, DPR = Math.min(2, window.devicePixelRatio || 1);
 cv.width = W * DPR; cv.height = H * DPR;
 const Q = new URLSearchParams(location.search);
-const AUTO = Q.has('auto'), SHOT = Q.get('shot');
+const AUTO = Q.has('auto'), SHOT = Q.get('shot'), AUTO_RIGHT = Q.has('right') ? +Q.get('right') / 100 : .85;
 const TOUCH = Q.has('mobile') || (!Q.has('desktop') && (
   matchMedia('(pointer: coarse)').matches ||
   (matchMedia('(any-pointer: coarse)').matches && matchMedia('(hover: none)').matches) ||
@@ -34,6 +34,7 @@ function shade(hex, f) {   // f > 0 lighter, f < 0 darker
 const LAPS = 3, TW = 92, S = 20;            // laps per race, half road width, stud size
 const PIT_QS = 6, PIT_TIME = 10, RACE_Q_TIME = 7, SLOWMO = 0.3;
 const PRIZE = [40, 30, 24, 18, 14, 10];
+const RIVAL_K = [.99, 1.03];   // rival top speed compared to yours
 const BASE = { max: 300, acc: 330, turn: 2.7, grip: 5 };
 
 const LOOKS = {
@@ -367,13 +368,14 @@ function statsFor(car) {
       glide: lv('wings') > 0, fly: lv('jets') > 0,
     };
   }
-  const k = clamp(.86 + .035 * G.races, .86, 1.22) * rand(.95, 1.04);
-  return { max: BASE.max * k, acc: BASE.acc * k, turn: BASE.turn + .1, grip: BASE.grip + 1, mass: 1, noSpin: false, nitro: 0, nitroPow: 1.4, nitroT: 1.8, glide: false, fly: false };
+  // rivals are built about as fast as YOUR car, so the race is won with maths turbos and good driving
+  const my = statsFor({ me: true }), k = rand(RIVAL_K[0], RIVAL_K[1]);
+  return { max: my.max * k, acc: my.acc * k, turn: Math.max(BASE.turn + .1, my.turn - .1), grip: Math.max(BASE.grip + 1, my.grip - .5), mass: 1, noSpin: false, nitro: 0, nitroPow: 1.4, nitroT: 1.8, glide: false, fly: false };
 }
 function makeCar(look, slot, me) {
   const p = gridSpot(slot);
   const c = { look, me, x: p.x, y: p.y, ang: p.a, vx: 0, vy: 0, idx: p.i, prog: p.i - T.N, off: false,
-    spin: 0, spinDir: 1, boost: 0, alt: 0, flyE: 1, flying: false, done: false, place: 0, lane: rand(-.5, .5), laneT: rand(1, 4), steer: 0, bump: 0 };
+    spin: 0, spinDir: 1, boost: 0, alt: 0, flyE: 1, flying: false, done: false, place: 0, lane: rand(-.5, .5), laneT: rand(1, 4), steer: 0, bump: 0, boostT: rand(6, 14) };
   c.st = statsFor(c); c.nitro = c.st.nitro;
   return c;
 }
@@ -592,8 +594,16 @@ function stepRace(dt) {
     if (n < R.lastBeep && n <= 3) { R.lastBeep = n; sfx.beep(); }
   } else if (R.lastBeep > 0) { R.lastBeep = 0; sfx.go(); }
   const going = R.t >= 0;
-  // rubber band: rivals far behind speed up a little, far ahead ease off
-  for (const c of R.cars) if (!c.me) c.rb = clamp(1 + (me.prog - c.prog) / T.N * .35, .9, 1.1);
+  // rubber band: rivals far behind speed up, far ahead ease off a little
+  // and they get boosts too: lots when they're a long way back, none when they're ahead (so the pack stays near you)
+  for (const c of R.cars) if (!c.me) {
+    const g = (me.prog - c.prog) / T.N;   // laps behind you (minus = ahead)
+    c.rb = g > 0 ? 1 + clamp(g * 1.2, 0, .2) : 1 - clamp(-g * .5, 0, .08);
+    if (going && !c.done && c.boost <= 0 && (c.boostT -= sdt) <= 0) {
+      c.boostT = rand(10, 16) / (1 + clamp(g, 0, .5) * 8);
+      if (g > .03) c.boost = 1.5;
+    }
+  }
   for (const c of R.cars) {
     c.bump -= sdt;
     const inp = going ? (c.me ? playerInput(c) : aiInput(c)) : { thr: 0, steer: 0 };
@@ -662,7 +672,7 @@ function stepRaceQ(dt) {
   if (q.fb) { q.fb -= dt; if (q.fb <= 0) closeRaceQ(); return; }
   q.t -= dt;
   $('qPanel').querySelector('.qbar i').style.transform = `scaleX(${Math.max(0, q.t / RACE_Q_TIME)})`;
-  if (AUTO && q.t < RACE_Q_TIME - 1.2) answerRace(Math.random() < .85 ? q.opts.indexOf(q.ans) : (q.opts.indexOf(q.ans) + 1) % 3);
+  if (AUTO && q.t < RACE_Q_TIME - 1.2) answerRace(Math.random() < AUTO_RIGHT ? q.opts.indexOf(q.ans) : (q.opts.indexOf(q.ans) + 1) % 3);
   else if (q.t <= 0) answerRace(-1);
 }
 function answerRace(i) {
@@ -673,7 +683,7 @@ function answerRace(i) {
   p.querySelectorAll('.qopts button').forEach((b, j) => b.className = q.opts[j] === q.ans ? 'right' : 'wrong');
   p.querySelector('.qq').textContent = `${q.a} × ${q.b} = ${q.ans}`;
   if (right) {
-    sfx.right(); sfx.boost(); R.me.boost = Math.max(R.me.boost, 1.6);
+    sfx.right(); sfx.boost(); R.me.boost = Math.max(R.me.boost, 2.2);
     G.bricks += 5; R.earned.q += 5; floatText(R.me.x, R.me.y - 30, 'TURBO! +5 🧱');
   } else sfx.wrong();
   q.fb = right ? .7 : 1.6;
@@ -697,6 +707,7 @@ function endRace() {
   $('resBricks').innerHTML = `Prize for ${ord(place)}: <b>+${prize} 🧱</b>` +
     (R.earned.q ? `<br>Maths turbos: <b>+${R.earned.q} 🧱</b>` : '') + (R.earned.bash ? `<br>Bashing cars: <b>+${R.earned.bash} 🧱</b>` : '');
   R.place = place;
+  if (AUTO) console.log(`auto race ${G.races}: place ${place}, ${R.t.toFixed(0)}s, gaps ` + order.map(c => ((c.prog - R.me.prog) / T.N).toFixed(2)).join(' '));
   scene.t = 0;
   if (AUTO) setTimeout(() => mode === 'result' && startPit(), 1500);
 }
@@ -755,7 +766,7 @@ function stepPit(dt) {
   const q = P.q; if (!q || q.done) return;
   q.t -= dt;
   $('pitBody').querySelector('.pbar i').style.transform = `scaleX(${Math.max(0, q.t / PIT_TIME)})`;
-  if (AUTO && q.t < PIT_TIME - 1.5) answerPit(Math.random() < .85 ? q.opts.indexOf(q.ans) : (q.opts.indexOf(q.ans) + 1) % 3);
+  if (AUTO && q.t < PIT_TIME - 1.5) answerPit(Math.random() < AUTO_RIGHT ? q.opts.indexOf(q.ans) : (q.opts.indexOf(q.ans) + 1) % 3);
   else if (q.t <= 0) answerPit(-1);
 }
 function pitFinish() {

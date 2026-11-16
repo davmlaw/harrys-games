@@ -101,7 +101,7 @@ button.big:disabled { filter: grayscale(.8) brightness(.8); cursor: default; }
 /* in-race question: top middle, see-through so you can still drive */
 #qPanel {
   position: absolute; left: 50%; top: 2cqw; transform: translateX(-50%); text-align: center; padding: .8cqw 2cqw 1.2cqw;
-  background: rgba(255,253,245,.9); color: var(--ink); border: .4cqw solid var(--ink); border-radius: 1.4cqw; pointer-events: auto;
+  background: rgba(255,253,245,.9); color: var(--ink); border: .4cqw solid var(--ink); border-radius: 1.4cqw; pointer-events: auto; z-index: 7;
 }
 #qPanel .qq { font-family: Bangers, Impact, sans-serif; font-size: 4.4cqw; letter-spacing: .05em; line-height: 1.1; }
 #qPanel .qopts button { font-size: 3.6cqw; min-width: 10cqw; }
@@ -219,3 +219,5 @@ body.fs #fsBtn, body.nofs #fsBtn, body.fs #rotateFs, body.nofs #rotateFs { displ
   #rotate .anyway { background: none; border: 0; color: #fff; opacity: .7; text-decoration: underline; font: inherit; font-size: 1rem; }
 }
 @keyframes turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+/* bigger answer buttons for thumbs (the question sits above the joystick area so taps always land on it) */
+body.touch #qPanel .qopts button { font-size: 4.6cqw; min-width: 13cqw; padding: .8cqw 1cqw .5cqw; }
