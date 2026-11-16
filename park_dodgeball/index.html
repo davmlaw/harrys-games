@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Park Dodgeball</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@600;800&display=swap">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <header><h1>Park Dodgeball</h1></header>
+
+  <div id="stage">
+    <canvas id="cv"></canvas>
+
+    <div id="mbar">
+      <button id="muteBtn" title="Sound">🔊</button>
+      <button id="fsBtn" title="Full screen">⛶</button>
+    </div>
+
+    <div id="titleUI" class="card">
+      <h2>Park Dodgeball</h2>
+      <p class="how touchOnly">👈 Left thumb: <b>run</b> &nbsp; 👉 Right thumb: <b>point your hands</b>, let go to <b>throw</b></p>
+      <p class="how deskOnly"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <b>run</b> &nbsp; Mouse: <b>point your hands</b> &nbsp; Click: <b>throw</b></p>
+      <p class="how">Point your hands right at a flying ball to <b>CATCH</b> it. Then the thrower loses a heart!</p>
+      <div class="row"><span class="lab">Players</span><div id="nBtns" class="opts"></div></div>
+      <div class="row"><span class="lab">Level</span><div id="dBtns" class="opts"></div></div>
+      <button id="playBtn" class="big">PLAY!</button>
+    </div>
+
+    <div id="endUI" class="card">
+      <h2 id="endTitle"></h2>
+      <p id="endText"></p>
+      <div class="row">
+        <button id="againBtn" class="big">Play again</button>
+        <button id="menuBtn" class="big alt">Menu</button>
+      </div>
+    </div>
+
+    <div id="ver">v1</div>
+  </div>
+
+  <div id="rotate">
+    <div class="phone">📱</div>
+    <p>Turn your phone sideways to play!</p>
+    <button id="anyway" class="anyway">Play this way anyway</button>
+  </div>
+
+  <div id="help">
+    <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows: run</span>
+    <span>Mouse: point your hands</span>
+    <span>Click or <kbd>Space</kbd>: throw</span>
+    <span>Best on a phone, with two thumbs!</span>
+  </div>
+</div>
+<script src="game.js?v=1"></script>
+</body>
+</html>
