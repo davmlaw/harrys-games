@@ -22,7 +22,7 @@ function oreAt(c, r) {
 }
 
 // Places you can build. c = main room's left wall column (extra rooms go to the left),
-// tree = the tree in front of the base (baddies come from the right).
+// tree = the tree in front of the base (zombies come from the right).
 const SPOTS = [
   { c: 14, tree: 22, text: 'A flat, grassy field.' },
   { c: 40, tree: 46, text: 'A cosy spot right next to a big tree.' },
@@ -32,7 +32,7 @@ const TREE_COLS = [2, 22, 28, 46, 55, 62, 87, 95, 102];
 const MAX_ROOMS = 2, ROOM_COST = 4, REBUILD_WOOD = 10, REBUILD_STONE = 5;
 const AXES = ['stone axe', 'iron axe', 'crystal axe'];
 const SWORDS = ['wooden sword', 'stone sword', 'iron sword', 'crystal sword'];
-// Baddies get tougher: their armour goes up a level every 2 nights. Your sword must be at least as strong.
+// Zombies get tougher: their armour goes up a level every 2 nights. Your sword must be at least as strong.
 const ARMOURS = [null, 'stone armour', 'iron armour', 'crystal armour'];
 const ARMOUR_COL = [null, ['#8e8e96', '#b4b4bc'], ['#c4c9d0', '#f2f4f8'], ['#2ec4d0', '#9ff8fa']];
 const armourFor = night => Math.min(3, Math.floor((night - 1) / 2));
@@ -45,11 +45,11 @@ const FRIEND_LOOKS = [
 ];
 
 const DEATHS = {
-  clink:     { emoji: '🪓', title: 'Clink!', text: "Axes can't hurt baddies! You need a sword." },
-  snap:      { emoji: '🛡️', title: 'Snap!', text: "Your sword wasn't strong enough for his armour. Baddies get tougher every night, so keep upgrading your sword!" },
+  clink:     { emoji: '🪓', title: 'Clink!', text: "Axes can't hurt zombies! You need a sword." },
+  snap:      { emoji: '🛡️', title: 'Snap!', text: "Your sword wasn't strong enough for the zombie's armour. Zombies get tougher every night, so keep upgrading your sword!" },
   kaboom:    { emoji: '💥', title: 'Kaboom!', text: 'You stayed in the middle of the room... but the bombs blew up the base.' },
-  frontdoor: { emoji: '🚪', title: 'Wrong Door', text: 'You ran out the front door, right into the baddie.' },
-  nobase:    { emoji: '🏚️', title: 'Nowhere to Hide', text: 'With no base and nowhere to hide, the baddie got you. Rebuild your base as soon as you can!' },
+  frontdoor: { emoji: '🚪', title: 'Wrong Door', text: 'You ran out the front door, right into the zombie.' },
+  nobase:    { emoji: '🏚️', title: 'Nowhere to Hide', text: 'With no base and nowhere to hide, the zombie got you. Rebuild your base as soon as you can!' },
 };
 
 // ---------- helpers ----------
@@ -116,7 +116,7 @@ function resetWorld() {
   for (const c of TREE_COLS) S.trees.push({ c, h: 4 + (c % 2), angle: 0, gone: false, shake: 0 });
   G = { night: 0, day: 0, wood: 0, stone: 0, axe: 0, sword: -1, mine: 0, mineLen: 0, friends: [], rejected: [], spot: null, phase: 'day', left: 0, met: 0 };
   hero = mkActor('hero', 1.5 * B); hero.item = 'axe0';
-  baddie = mkActor('baddie', 0); baddie.visible = false; baddie.dir = -1; baddie.item = 'knife'; baddie.armour = 0;
+  baddie = mkActor('baddie', 0); baddie.visible = false; baddie.dir = -1; baddie.item = 'bat'; baddie.armour = 0;
   tasks = [];
 }
 const people = () => [hero, ...G.friends];
@@ -442,22 +442,25 @@ function drawItem(item) {
     ctx.fillStyle = tier === 3 ? '#7a4dff' : '#6b4524'; ctx.fillRect(-6, 5, 12, 4);
     ctx.fillStyle = edge; ctx.fillRect(-3.5, 9, 7, 26);
     ctx.fillStyle = mid; ctx.fillRect(-2, 9, 4, 24); ctx.fillRect(-1, 33, 2, 4);
-  } else if (item === 'knife') {
-    ctx.fillStyle = '#222'; ctx.fillRect(-1.5, -3, 3, 8);
-    ctx.fillStyle = '#c8ccd4'; ctx.fillRect(-2, 5, 4, 14); ctx.fillStyle = '#fff'; ctx.fillRect(-2, 5, 1, 13);
+  } else if (item === 'bat') {   // a wooden bat
+    ctx.fillStyle = '#3a2a1a'; ctx.fillRect(-2.5, -5, 5, 3);
+    ctx.fillStyle = '#8a5a2b'; ctx.fillRect(-1.5, -2, 3, 12);
+    ctx.fillStyle = '#b9824a'; ctx.fillRect(-3, 10, 6, 20); ctx.fillRect(-2, 30, 4, 2);
+    ctx.fillStyle = '#d6a36a'; ctx.fillRect(-3, 10, 2, 20);
   }
 }
 
 const HERO_LOOK = { shirt: '#d6453d', shirtD: '#a83029', hair: '#6b3b1d', band: '#2e7dd7' };
 function drawActor(a, glowOnly) {
   if (!a.visible) return;
-  const bad = a.kind === 'baddie' && !a.look; // hooded baddie (a rejected survivor keeps their own look)
+  const bad = a.kind === 'baddie' && !a.look; // zombie (a rejected survivor keeps their own clothes, but goes green too)
+  const zom = a.kind === 'baddie', SKIN = zom ? '#7fb069' : '#f2c08a';
   const lh = bad ? 22 : 18, bh = bad ? 26 : 22, hd = bad ? 20 : 18, top = -(lh + bh + hd);
   ctx.save();
   ctx.translate(a.x, a.y + a.hopY); ctx.scale(a.dir, 1); ctx.rotate(a.angle);
   if (glowOnly) { // baddie's eyes glow in the dark, even when you can't see him
     ctx.shadowColor = '#ff2020'; ctx.shadowBlur = 12; ctx.fillStyle = '#ff4040';
-    if (bad) { ctx.fillRect(2, top + 8, 3, 7); ctx.fillRect(7, top + 8, 3, 7); }
+    if (bad) { ctx.fillRect(2, top + 8, 3, 4); ctx.fillRect(7, top + 9, 2, 4); }
     else { ctx.fillRect(2, top + 9, 2, 6); ctx.fillRect(6, top + 9, 2, 6); }
     ctx.restore(); return;
   }
@@ -465,11 +468,11 @@ function drawActor(a, glowOnly) {
   if (a.flash > 0 && 'filter' in ctx) ctx.filter = 'brightness(3)';
   const L = bad ? null : (a.look || HERO_LOOK);
   const ph = a.walking ? Math.sin(a.walkT * 12) : 0;
-  const leg = bad ? '#22152f' : '#3a4f8f', legD = bad ? '#170d20' : '#2b3b6b';
-  const shirt = bad ? '#3d2457' : L.shirt, shirtD = bad ? '#2a173d' : L.shirtD;
+  const leg = bad ? '#5a4a3a' : '#3a4f8f', legD = bad ? '#40342a' : '#2b3b6b';
+  const shirt = bad ? '#5b6b7a' : L.shirt, shirtD = bad ? '#44515d' : L.shirtD;
   const shoulderY = -(lh + bh) + 3;
   ctx.fillStyle = legD; ctx.fillRect(-7 + ph * 4, -lh, 7, lh);
-  drawArm(-2, shoulderY, -ph * 0.6, shirtD, bad ? '#170d20' : '#d9a26e', null);
+  drawArm(-2, shoulderY, -ph * 0.6, shirtD, zom ? '#5c8a4a' : '#d9a26e', null);
   ctx.fillStyle = leg; ctx.fillRect(-1 - ph * 4, -lh, 7, lh);
   ctx.fillStyle = shirt; ctx.fillRect(-9, -(lh + bh), 18, bh);
   if (!bad) { ctx.fillStyle = '#5a3a1a'; ctx.fillRect(-9, -lh - 5, 18, 4); }
@@ -477,7 +480,7 @@ function drawActor(a, glowOnly) {
   const AC2 = a.armour ? ARMOUR_COL[a.armour] : null;
   if (AC2) { ctx.fillStyle = AC2[0]; ctx.fillRect(-10, -(lh + bh) + 2, 20, 14); ctx.fillStyle = AC2[1]; ctx.fillRect(-10, -(lh + bh) + 2, 20, 3); }
   if (!bad) {
-    ctx.fillStyle = '#f2c08a'; ctx.fillRect(-hd / 2, top, hd, hd);
+    ctx.fillStyle = SKIN; ctx.fillRect(-hd / 2, top, hd, hd);
     ctx.fillStyle = L.hair; ctx.fillRect(-hd / 2, top, hd, 5); ctx.fillRect(-hd / 2, top, 5, 12);
     ctx.fillStyle = L.band; ctx.fillRect(-hd / 2, top + 5, hd, 3);
     ctx.fillStyle = '#1a1220';
@@ -487,12 +490,17 @@ function drawActor(a, glowOnly) {
     ctx.fillRect(3, top + 15, 5, 1.5);
     if (AC2) { ctx.fillStyle = AC2[0]; ctx.fillRect(-hd / 2 - 1, top - 3, hd + 2, 6); }
   } else {
-    ctx.fillStyle = '#2a173d'; ctx.fillRect(-hd / 2 - 1, top - 3, hd + 2, hd + 4);
-    if (AC2) { ctx.fillStyle = AC2[0]; ctx.fillRect(-hd / 2 - 2, top - 5, hd + 4, 7); }
-    ctx.fillStyle = '#0b0610'; ctx.fillRect(-2, top + 4, hd / 2 + 2, hd - 6);
-    ctx.fillStyle = '#ff4040'; ctx.fillRect(2, top + 8, 3, 7); ctx.fillRect(7, top + 8, 3, 7);
+    // zombie: green head, messy hair, red eyes, wonky teeth, ripped shirt
+    ctx.fillStyle = '#44515d'; ctx.fillRect(-9, -lh - 12, 4, 6); ctx.fillRect(1, -lh - 10, 4, 4); ctx.fillRect(5, -lh - 14, 4, 8);
+    ctx.fillStyle = SKIN; ctx.fillRect(-hd / 2, top, hd, hd);
+    ctx.fillStyle = '#5c8a4a'; ctx.fillRect(-hd / 2, top + hd - 4, hd, 4); ctx.fillRect(-6, top + 12, 3, 3);
+    ctx.fillStyle = '#2b3a22'; ctx.fillRect(-hd / 2, top - 1, hd, 4); ctx.fillRect(-hd / 2, top, 4, 9); ctx.fillRect(-2, top + 3, 3, 2); ctx.fillRect(5, top + 3, 4, 3);
+    if (AC2) { ctx.fillStyle = AC2[0]; ctx.fillRect(-hd / 2 - 1, top - 4, hd + 2, 6); }
+    ctx.fillStyle = '#1a1220'; ctx.fillRect(1, top + 7, 5, 6); ctx.fillRect(6, top + 8, 4, 6);
+    ctx.fillStyle = '#ff4040'; ctx.fillRect(2, top + 8, 3, 4); ctx.fillRect(7, top + 9, 2, 4);
+    ctx.fillStyle = '#1a1220'; ctx.fillRect(1, top + 15, 8, 3); ctx.fillStyle = '#fff'; ctx.fillRect(2, top + 15, 2, 2); ctx.fillRect(6, top + 16, 2, 2);
   }
-  drawArm(1, shoulderY, a.arm + (a.walking ? ph * 0.5 : 0), shirt, bad ? '#22152f' : '#f2c08a', a.item);
+  drawArm(1, shoulderY, a.arm + (a.walking ? ph * 0.5 : 0), shirt, SKIN, a.item);
   ctx.restore();
 }
 function drawArm(x, y, ang, sleeve, hand, item) {
@@ -660,7 +668,7 @@ async function night() {
   caption('The sun goes down...');
   if (S.tod < 1) await tween(S, 'tod', 1, 3);
   S.cam.focus = () => frontX() + B;
-  // the baddie is out there in the dark (you can only see his eyes)
+  // the zombie is out there in the dark (you can only see his eyes)
   baddie.visible = true; baddie.alpha = 0; baddie.dead = false; baddie.angle = 0; baddie.arm = 0; baddie.dir = -1;
   baddie.armour = armourFor(G.night);
   baddie.evil = false; baddie.look = null; baddie.name = null;
@@ -703,7 +711,7 @@ async function goOutAndLook() {
     await chopTree(tree, true);
     hero.item = 'sword' + G.sword;
     await walkTo(baddie, hero.x + 4 * B, 110);
-    if (await ask('The baddie is right there! Attack the baddie?', YN) === 'y') return fight();
+    if (await ask('The zombie is right there! Attack the zombie?', YN) === 'y') return fight();
   }
   caption('You run back inside!');
   await goIn();
@@ -716,8 +724,8 @@ async function reveal() {
   if (baddie.evil) {
     await say(baddie, `Remember me? It's ${baddie.name}!`, 1.6);
     await say(baddie, "You wouldn't let me join your team!", 1.8);
-  } else await say(baddie, 'Hehehe...', 1.2);
-  const who = baddie.evil ? `It's ${baddie.name}, the survivor you wouldn't let join, and they've got a knife!` : "It's a BADDIE with a knife!";
+  } else await say(baddie, 'Grrrr...', 1.2);
+  const who = baddie.evil ? `It's ${baddie.name}, the survivor you wouldn't let join, they've turned into a ZOMBIE, and they've got a bat!` : "It's a ZOMBIE with a bat!";
   const arm = baddie.armour ? ` ${baddie.evil ? 'They are' : 'He is'} wearing ${ARMOURS[baddie.armour].toUpperCase()}. You need a ${SWORDS[baddie.armour]} or better!` : '';
   await narrate(who + arm);
 }
@@ -745,7 +753,7 @@ async function noBaseNight() {
     await chopTree(tree, true);
     hero.item = 'sword' + G.sword;
     await walkTo(baddie, hero.x + 4 * B, 110);
-    if (await ask('The baddie is right there! Attack?', YN) === 'y') return fight();
+    if (await ask('The zombie is right there! Attack?', YN) === 'y') return fight();
     if (!G.mine) {
       await say(hero, 'Nowhere to hide!', 1.2);
       await walkTo(baddie, hero.x + 36, 120);
@@ -756,7 +764,7 @@ async function noBaseNight() {
   caption('Everyone climbs down into the mine!');
   await Promise.all(people().map(a => climbDown(a)));
   await walkTo(baddie, shaftX() + 2 * B, 80);
-  await say(baddie, 'Where did they go?!', 1.6);
+  await say(baddie, 'Grr? Where did they go?!', 1.6);
   walkTo(baddie, baddie.x + 14 * B, 90).then(() => { baddie.visible = false; });
   await wait(1.5);
 }
@@ -769,7 +777,7 @@ async function fight() {
     burst(baddie.x - 12, baddie.y - 40, 14, ['#c89b5c', '#7a5530', '#fff'], { speed: 200, life: 0.5, size: 5 });
     hero.item = null; restArm(hero);
     await say(hero, 'SNAP!', 0.9);
-    await say(baddie, 'Hehe. Nice try.', 1.2);
+    await say(baddie, 'Grrr. Nice try.', 1.2);
     await stab(baddie, hero);
     return heroDies('snap', `Your ${SWORDS[G.sword]} snapped on the ${ARMOURS[baddie.armour]}!`);
   }
@@ -781,29 +789,29 @@ async function fight() {
     if (i === hits - 2) await say(baddie, 'OW!', 0.6); else await wait(0.25);
   }
   restArm(hero);
-  burst(baddie.x, baddie.y - 35, 40, baddie.look ? [baddie.look.shirt, baddie.look.hair, '#aaa'] : ['#3d2457', '#6b3fa0', '#2a173d', '#aaa'], { speed: 200, grav: 0, life: 0.9, size: 10 });
+  burst(baddie.x, baddie.y - 35, 40, baddie.look ? [baddie.look.shirt, baddie.look.hair, '#aaa'] : ['#7fb069', '#5c8a4a', '#5b6b7a', '#aaa'], { speed: 200, grav: 0, life: 0.9, size: 10 });
   SFX.boom(); baddie.visible = false;
   await wait(0.5);
   hop(hero); await say(hero, 'YEAH!', 1);
-  await narrate(baddie.evil ? `You beat ${baddie.name}!` : 'You beat the baddie!');
+  await narrate(baddie.evil ? `You beat ${baddie.name}!` : 'You beat the zombie!');
   caption('You head back inside.');
   await goIn();
 }
 
 async function axeAttack() {
-  caption('You run at the baddie with your axe!');
+  caption('You run at the zombie with your axe!');
   await walkTo(hero, baddie.x - 36, 200);
   await swing(hero); SFX.clink();
   burst(baddie.x - 12, baddie.y - 40, 12, ['#fff', '#ffe066'], { speed: 220, grav: 0, life: 0.25, size: 3 });
   restArm(hero);
   await say(hero, 'CLINK?!', 1);
-  await say(baddie, 'Hehe. That tickles.', 1.4);
+  await say(baddie, 'Grrr. That tickles.', 1.4);
   await say(hero, 'Uh oh...', 0.9);
   await stab(baddie, hero);
-  return heroDies('clink', "Your axe just bounced off! Axes can't hurt baddies.");
+  return heroDies('clink', "Your axe just bounced off! Axes can't hurt zombies.");
 }
 
-// The baddie lays two bombs. Everyone picks what to do, and your friends never pick the same as you.
+// The zombie lays two bombs. Everyone picks what to do, and your friends never pick the same as you.
 async function bombs() {
   const b = S.base, front = frontX();
   S.cam.focus = () => (S.base.s + 4) * B;
@@ -813,7 +821,7 @@ async function bombs() {
   await walkTo(baddie, front + 66, 60); baddie.dir = -1;
   await tween(baddie, 'arm', -0.6, 0.2); S.bombs.push({ x: front + 40, y: b.g * B }); SFX.pop(); SFX.hiss(); await restArm(baddie);
   await walkTo(baddie, front + 4 * B, 80); baddie.dir = -1;
-  await say(baddie, 'Hehehe...', 1.2);
+  await say(baddie, 'Grrrr...', 1.2);
 
   const opts = [['middle', '🧍 Stay in the middle of the room'], ['dig', '⛏️ Dig a hole out the back']];
   if (G.mine) opts.push(['mine', '🪜 Climb down into the mine']);
@@ -855,12 +863,12 @@ async function resolveBombs(plan) {
   for (const a of who('middle')) { a.dead = true; a.angle = -Math.PI / 2; }
   if (hero.dead) {
     const cause = who('front').includes(hero) ? 'frontdoor' : 'kaboom';
-    await narrate(cause === 'frontdoor' ? 'The baddie was waiting right outside the door.' : 'KABOOM! The bombs blew up the base with you inside.');
+    await narrate(cause === 'frontdoor' ? 'The zombie was waiting right outside the door.' : 'KABOOM! The bombs blew up the base with you inside.');
     throw new GameOver(cause);
   }
   await say(hero, 'Phew!', 0.8);
   await tween(baddie, 'alpha', 1, 0.4);
-  baddie.dir = 1; await say(baddie, baddie.evil ? "That's for not letting me join!" : 'Hahaha!', 1.4);
+  baddie.dir = 1; await say(baddie, baddie.evil ? "That's for not letting me join!" : 'GRRRAAAH!', 1.4);
   walkTo(baddie, baddie.x + 14 * B, 90).then(() => { baddie.visible = false; });
   await wait(1.5);
 }
@@ -926,7 +934,7 @@ async function day() {
   hero.item = 'axe' + G.axe;
   const next = armourFor(G.night + 1);
   if (next > armourFor(G.night)) {
-    await narrate(`You find big footprints outside... The baddies are getting tougher! From tonight they wear ${ARMOURS[next].toUpperCase()}.` +
+    await narrate(`You find big footprints outside... The zombies are getting tougher! From tonight they wear ${ARMOURS[next].toUpperCase()}.` +
       (G.sword < next ? ` You'll need a ${SWORDS[next]} or better to beat them.` : ` Good thing you have a ${SWORDS[G.sword]}!`));
   }
   while (G.left > 0) {
@@ -1078,7 +1086,7 @@ async function dayMine() {
     if (swordTier > G.sword) { G.sword = swordTier; made.push(SWORDS[swordTier].toUpperCase()); }
     hero.item = 'sword' + G.sword; SFX.ding();
     await tween(hero, 'arm', -2.6, 0.2, easeOut); await say(hero, 'Shiny!', 1); restArm(hero);
-    await narrate(`You made a ${made.join(' and a ')}!` + ['', ' It can beat baddies in stone armour.', ' Iron chops trees faster and beats iron armour.', ' Crystal is the best there is!'][swordTier]);
+    await narrate(`You made a ${made.join(' and a ')}!` + ['', ' It can beat zombies in stone armour.', ' Iron chops trees faster and beats iron armour.', ' Crystal is the best there is!'][swordTier]);
     hero.item = 'axe' + G.axe;
   }
   caption('You climb back up...');
