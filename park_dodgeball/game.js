@@ -29,9 +29,10 @@ const CFG = {
   PR: 15,               // body size (radius)
   BR: 8,                // ball size (radius)
   SPEED: 190,           // running speed
-  THROW: 560,           // ball speed
+  THROW: 520,           // ball speed
   FLY: 540,             // how far a ball flies before it lands (a landed ball can't hurt)
-  CATCH_ARC: TAU / 8,   // how wide your hands are: 1/8 of a circle. Smaller = harder to catch
+  CATCH_ARC: TAU / 6,   // how wide your hands are: 1/6 of a circle. Smaller = harder to catch
+  BLOCK_ARC: TAU / 4,   // holding a ball? It blocks anything coming at this much of your front
   SAFE: 1.2,            // seconds you can't be hit after losing a heart
   WINDUP: .6,           // how long a computer player holds the ball up before throwing
 };
@@ -130,14 +131,16 @@ function deadBounce(b, p) {   // ball stops being dangerous and pops off the pla
 }
 function ballMeetsPlayer(b, p) {
   const toBall = Math.atan2(b.y - p.y, b.x - p.x);
-  const inHands = Math.abs(wrapA(toBall - p.hand)) <= CFG.CATCH_ARC / 2;
+  const inHands = Math.abs(wrapA(toBall - p.hand)) <= (p.ball ? CFG.BLOCK_ARC : CFG.CATCH_ARC) / 2;
   if (inHands && !p.ball) {           // CATCH! the thrower loses a heart
     G.balls.splice(G.balls.indexOf(b), 1); grab(p); p.catches++;
     say(p.x, p.y - 34, 'CATCH!', '#7CFC9A', true); puff(b.x, b.y, '#fff', 8); SFX.catch();
     const o = b.owner;
     if (o && !o.out) { say(o.x, o.y - 34, 'CAUGHT OUT!', '#ff8a70'); loseHeart(o); }
   } else if (inHands) {               // already holding a ball: it bounces off your ball
-    deadBounce(b, p); say(p.x, p.y - 34, 'BLOCK!', '#bfe3ff'); SFX.block();
+    const sp = Math.hypot(b.vx, b.vy) || 1;     // it loses nearly all its speed and plops back the way it came
+    b.live = false; b.vx = -b.vx / sp * 45; b.vy = -b.vy / sp * 45;
+    say(p.x, p.y - 34, 'BLOCK!', '#bfe3ff'); puff(b.x, b.y, '#fff', 5, 50); SFX.block();
   } else if (p.safe > 0) {
     deadBounce(b, p);
   } else {                            // HIT
@@ -266,9 +269,8 @@ if (TOUCH) {
   const end = e => {
     if (e.pointerId === move.id) { move.id = null; move.x = move.y = 0; }
     if (e.pointerId === aim.id) {
-      const pushed = Math.hypot(aim.x, aim.y) > .3;
       aim.id = null; aim.x = aim.y = 0;
-      if (pushed && e.type === 'pointerup') humanThrow();    // let go = throw
+      if (e.type === 'pointerup') humanThrow();    // a tap, or letting go = throw
     }
   };
   addEventListener('pointerup', end); addEventListener('pointercancel', end);
@@ -422,7 +424,10 @@ function drawPlayer(p) {
   const hx = p.ball ? bd : Math.cos(half * .8) * hd, hy = p.ball ? CFG.BR + 1 : Math.sin(half * .8) * hd;
   ctx.strokeStyle = p.shirt; ctx.lineWidth = 6; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(1, -PR + 4); ctx.lineTo(hx, -hy); ctx.moveTo(1, PR - 4); ctx.lineTo(hx, hy); ctx.stroke();
-  if (p.human && !p.ball) { ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(0, 0, PR + CFG.BR + 3, -half, half); ctx.stroke(); }
+  if (p.human) {   // your catching zone (white), or blocking zone when you hold a ball (blue)
+    const z = (p.ball ? CFG.BLOCK_ARC : CFG.CATCH_ARC) / 2;
+    ctx.strokeStyle = p.ball ? 'rgba(150,215,255,.8)' : 'rgba(255,255,255,.75)'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(0, 0, PR + CFG.BR + (p.ball ? 11 : 3), -z, z); ctx.stroke();
+  }
   // body and head
   ctx.fillStyle = p.shirt; ctx.strokeStyle = '#1d1a33'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.ellipse(0, 0, 9, PR, 0, 0, TAU); ctx.fill(); ctx.stroke();
@@ -493,7 +498,8 @@ function showEnd() {
 }
 function startPlay() { ac(); goFullscreen(); newGame(SET.n, true); move.id = aim.id = null; move.x = move.y = aim.x = aim.y = 0; setMode('play'); }
 $('playBtn').onclick = startPlay; $('againBtn').onclick = startPlay;
-$('menuBtn').onclick = () => { newGame(6, false); setMode('title'); };
+const toMenu = () => { newGame(6, false); setMode('title'); };
+$('menuBtn').onclick = toMenu; $('quitBtn').onclick = toMenu;
 $('muteBtn').textContent = SET.muted ? '🔇' : '🔊';
 $('muteBtn').onclick = () => { ac(); SET.muted = !SET.muted; saveSet(); $('muteBtn').textContent = SET.muted ? '🔇' : '🔊'; };
 $('anyway').onclick = () => document.body.classList.add('portraitOk');
@@ -512,6 +518,15 @@ if (!fsSupported) document.body.classList.add('nofs');
 const fsChange = () => document.body.classList.toggle('fs', isFs());
 document.addEventListener('fullscreenchange', fsChange); document.addEventListener('webkitfullscreenchange', fsChange);
 $('fsBtn').onclick = () => { ac(); goFullscreen(); };
+// turn the phone upright = leave full screen (full screen locks the picture sideways, so we watch the tilt sensor)
+const exitFs = () => { if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document); };
+let uprightT = 0;
+addEventListener('deviceorientation', e => {
+  if (!isFs() || e.beta == null) return;
+  const upright = Math.abs(e.beta) > 50 && Math.abs(e.beta) < 130 && Math.abs(e.gamma) < 25;
+  if (!upright) uprightT = 0; else if (!uprightT) uprightT = performance.now(); else if (performance.now() - uprightT > 700) { uprightT = 0; exitFs(); }
+});
+matchMedia('(orientation: portrait)').addEventListener?.('change', e => { if (e.matches) exitFs(); });
 
 // ---------- go ----------
 bakePark();

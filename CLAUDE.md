@@ -166,10 +166,10 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 
 ### park_dodgeball (`game.js`)
 
-- **Controls**: touch = two floating sticks drawn on the canvas (left half `move`, right half `aim`; letting go of the aim
-  stick throws). Desktop = WASD/arrows, mouse points the hands, click/Space throws. `control(p)` reads them.
+- **Controls**: touch = two floating sticks drawn on the canvas (left half `move`, right half `aim`; a tap or letting go of the aim
+  stick throws; tilting the phone upright leaves full screen). Desktop = WASD/arrows, mouse points the hands, click/Space throws. `control(p)` reads them.
 - **The catch rule** is `ballMeetsPlayer`: when a live ball touches a body, compare the angle to the ball with `p.hand`.
-  Within `CFG.CATCH_ARC` (1/8 of a circle) and empty hands = catch (thrower loses a heart); holding a ball = block;
+  Within `CFG.CATCH_ARC` (1/6 of a circle) and empty hands = catch (thrower loses a heart); holding a ball = block (wider `BLOCK_ARC`, ball plops back);
   otherwise a hit. Balls are only "live" for `CFG.FLY` px or until they touch the trees; dead balls get picked up by walking over them.
 - `G.balls` holds only balls not in hands (a held ball is just `p.ball = true`). 3 hearts each, last one standing wins.
 - **AI** (`think`): fetch a ball, pick a target, hold the ball up for a wind-up (red ring = warning), throw with aim error.

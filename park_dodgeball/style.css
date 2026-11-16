@@ -60,3 +60,9 @@ body.touch #stage { width: min(100vw, calc(100dvh * 16 / 9)); border: 0; border-
   #rotate .anyway { background: none; border: 0; color: #fff; opacity: .7; text-decoration: underline; font-size: 1rem; }
 }
 @keyframes turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+.card .home { position: absolute; left: 2cqw; top: 1.6cqw; font-size: 1.8cqw; font-weight: 800; color: var(--ink); text-decoration: none;
+  background: var(--yellow); border: .3cqw solid var(--ink); border-radius: 99px; padding: .3cqw 1.2cqw; z-index: 2; }
+#quitBtn { display: none; }
+body:not(.title):not(.over) #quitBtn { display: block; }
+header a { color: #fff; font-weight: 800; }
+#titleUI h2 { margin-top: 3.4cqw; }

@@ -6,7 +6,7 @@
 <title>Park Dodgeball</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@600;800&display=swap">
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <div id="app">
@@ -16,15 +16,17 @@
     <canvas id="cv"></canvas>
 
     <div id="mbar">
+      <button id="quitBtn" title="Back to the menu">✕</button>
       <button id="muteBtn" title="Sound">🔊</button>
       <button id="fsBtn" title="Full screen">⛶</button>
     </div>
 
     <div id="titleUI" class="card">
+      <a class="home" href="../index.html">← Harry's Games</a>
       <h2>Park Dodgeball</h2>
-      <p class="how touchOnly">👈 Left thumb: <b>run</b> &nbsp; 👉 Right thumb: <b>point your hands</b>, let go to <b>throw</b></p>
+      <p class="how touchOnly">👈 Left thumb: <b>run</b> &nbsp; 👉 Right thumb: <b>point your hands</b>, tap or let go to <b>throw</b></p>
       <p class="how deskOnly"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <b>run</b> &nbsp; Mouse: <b>point your hands</b> &nbsp; Click: <b>throw</b></p>
-      <p class="how">Point your hands right at a flying ball to <b>CATCH</b> it. Then the thrower loses a heart!</p>
+      <p class="how">Point your hands right at a flying ball to <b>CATCH</b> it. Then the thrower loses a heart! Holding a ball? It <b>blocks</b> balls from the front.</p>
       <div class="row"><span class="lab">Players</span><div id="nBtns" class="opts"></div></div>
       <div class="row"><span class="lab">Level</span><div id="dBtns" class="opts"></div></div>
       <button id="playBtn" class="big">PLAY!</button>
@@ -39,7 +41,7 @@
       </div>
     </div>
 
-    <div id="ver">v1</div>
+    <div id="ver">v2</div>
   </div>
 
   <div id="rotate">
@@ -55,6 +57,6 @@
     <span>Best on a phone, with two thumbs!</span>
   </div>
 </div>
-<script src="game.js?v=1"></script>
+<script src="game.js?v=2"></script>
 </body>
 </html>
