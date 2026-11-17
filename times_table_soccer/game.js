@@ -7,6 +7,11 @@ const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
 const W = 960, H = 540, DPR = Math.min(2, window.devicePixelRatio || 1);
 cv.width = W * DPR; cv.height = H * DPR;
+// old phones and tablets don't know roundRect: teach them (without this the game froze at kick off)
+if (!ctx.roundRect) Object.getPrototypeOf(ctx).roundRect = function (x, y, w, h, r) {
+  r = Math.min(+r || 0, w / 2, h / 2);
+  this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r); this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath();
+};
 const Q = new URLSearchParams(location.search);
 const AUTO = Q.has('auto');
 const AUTO_RIGHT = Q.has('right') ? +Q.get('right') / 100 : .8;
@@ -805,9 +810,9 @@ const timerLoop = AUTO || Q.has('shot');
 let last = performance.now();
 function loop() {
   const now = performance.now(), dt = Math.min(.05, (now - last) / 1000); last = now;
-  step(dt);
+  try { step(dt); } catch (e) { console.error(e); }   // one hiccup must never freeze the whole game
   if (AUTO && mode === 'over') { console.log(`auto full time: ${G.score[0]}-${G.score[1]}, your goals ${G.stats.goals}, maths ${G.stats.right}/${G.stats.asked}, tables ${M.tables}`); newMatch(M.pos); setMode('play'); }
-  draw();
+  try { draw(); } catch (e) { console.error(e); }
   if (timerLoop) setTimeout(loop, 16); else requestAnimationFrame(loop);
 }
 loop();
