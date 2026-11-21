@@ -1,6 +1,8 @@
 'use strict';
 // Mega Cookie: click the big cookie a few times (the fun bit), then a sum pops up and three cookies show answers.
-// Click the right cookie to win cookies (answer fast for a speed bonus), click a wrong one and you lose some.
+// There's no time limit: take your time. Click the right cookie to win cookies (a small bonus for a quick right answer),
+// click a wrong one and you lose some, see the right answer, and get another sum: you go back to clicking once you get one right.
+// How many of your last 10 answers were right (ACC) multiplies all the cookies you get, so guessing never pays.
 // Spend cookies in the shop on things that add more cookies to every right answer.
 // Everything is PLUS, never times (Harry's rule).
 
@@ -39,16 +41,24 @@ const PRICE_UP = 1.15;   // each one you buy costs 15% more than the last
 const BASE_ANSWER = 5;   // cookies for a right answer before any upgrades
 
 const SAVE_KEY = 'megaCookie2';
-let G = {cookies:0, n:{}, right:0, muted:false, won:false, level:1};
+const fresh = () => ({cookies:0, n:{}, right:0, asked:0, last:[], muted:false, won:false, level:1});   // last = your last 10 answers (1 right, 0 wrong)
+let G = fresh();
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s.cookies === 'number') G = Object.assign(G, s); } catch (e) {}
+if (!G.asked) G.asked = G.right;   // saves from before v8
 function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch (e) {} }
 
 const $ = id => document.getElementById(id);
 const owned = it => G.n[it.id] || 0;
 const price = it => Math.ceil(it.cost * Math.pow(PRICE_UP, owned(it)));
 const CLICKS_PER_Q = 12; // clicks on the big cookie before each maths question
-const perClick = () => Math.max(1, Math.round(perAns() / 10));
-const perAns = () => ITEMS.reduce((t, it) => t + owned(it) * (it.pa || 0), BASE_ANSWER);
+const perAns = () => ITEMS.reduce((t, it) => t + owned(it) * (it.pa || 0), BASE_ANSWER);   // what the shop adds up to
+// ACC: how many of your last 10 answers were right. Until there are 10, the missing ones count as 80%.
+// The multiplier goes 100% = ×2, 90% = ×1.5, 80% = ×1, 70% = ×0.75, 50% = ×0.35, guessing (33%) = ×0.15
+const ACC_N = 10, QUICK = 5, QUICK_BONUS = .25;   // a right answer within QUICK seconds gets +25%
+const acc = () => (G.last.reduce((t, v) => t + v, 0) + .8 * (ACC_N - G.last.length)) / ACC_N;
+const accMult = () => Math.round((.1 + 1.9 * Math.pow(acc(), 3)) * 20) / 20;
+const earnAns = () => Math.max(1, Math.round(perAns() * accMult()));   // cookies for a right answer
+const perClick = () => Math.max(1, Math.round(earnAns() / 10));
 
 // ---------- numbers ----------
 const WORDS = [[1e21,'sextillion'],[1e18,'quintillion'],[1e15,'quadrillion'],[1e12,'trillion']];
@@ -148,7 +158,11 @@ function renderShop(){
 }
 function update(){
   countEl.textContent = fmt(G.cookies);
-  $('perAns').textContent = fmt(perAns());
+  $('perAns').textContent = fmt(earnAns());
+  const m = accMult(), n = G.last.length, good = G.last.reduce((t, v) => t + v, 0);
+  $('accMult').textContent = `×${m} for getting them right`;
+  $('acc').innerHTML = n ? `🎯 Last ${n}: <b>${Math.round(good / n * 100)}%</b> right <small>×${m} cookies</small>` : '🎯 Get sums right for more cookies!';
+  $('acc').className = 'acc ' + (!n ? '' : good / n >= .9 ? 'great' : good / n >= .7 ? 'ok' : 'bad');
   $('perClick').textContent = '+' + fmt(perClick());
   for (const it of ITEMS) {
     const c = price(it), can = G.cookies >= c;
@@ -166,13 +180,11 @@ function update(){
 }
 
 // ---------- answering ----------
-const QTIMES = [6, 6, 7, 7, 9, 10]; // seconds per question at each level
-let QTIME = 6;
 const answersEl = $('answers'), fx = $('fx');
-let Q = null, qLeft = 0, streak = 0, wrongRow = 0, locked = false;
+let Q = null, qT = 0, streak = 0, wrongRow = 0, locked = false;   // qT = seconds since the sum came up (no time limit)
 function nextQuestion(){
-  Q = makeQuestion(G.level); QTIME = QTIMES[G.level - 1];
-  qLeft = QTIME; locked = false;
+  Q = makeQuestion(G.level);
+  qT = 0; locked = false;
   const qEl = $('question'); qEl.textContent = Q.q; qEl.classList.remove('new'); void qEl.offsetWidth; qEl.classList.add('new');
   answersEl.classList.remove('locked');
   answersEl.innerHTML = '';
@@ -191,7 +203,8 @@ function floatText(text, x, y, cls){
   p.style.left = x + (Math.random() * 30 - 15) + 'px'; p.style.top = y + 'px';
   fx.appendChild(p); setTimeout(() => p.remove(), 900);
 }
-function lockThen(ms){ locked = true; answersEl.classList.add('locked'); setTimeout(startClicking, ms); }
+function lockThen(ms, then = startClicking){ locked = true; answersEl.classList.add('locked'); setTimeout(then, ms); }
+function record(right){ G.asked++; G.last.push(right ? 1 : 0); if (G.last.length > ACC_N) G.last.shift(); }
 
 // ---------- the fun bit: click the big cookie ----------
 const cookieBtn = $('cookie');
@@ -215,7 +228,7 @@ function clickCookie(x, y){
   clicksLeft--; showClicks(); update();
   if (clicksLeft <= 0) {
     tone(660, 0, .1, 'square', .06); tone(990, .1, .18, 'square', .06);
-    setTimeout(() => { document.body.classList.add('quizMode'); $('hint').textContent = 'Click the cookie with the right answer! Quick = bonus ⚡'; nextQuestion(); }, 150);
+    setTimeout(() => { document.body.classList.add('quizMode'); $('hint').textContent = 'Take your time and click the cookie with the right answer!'; nextQuestion(); }, 150);
   }
 }
 cookieBtn.addEventListener('pointerdown', e => { e.preventDefault(); clickCookie(e.clientX, e.clientY); });
@@ -225,24 +238,27 @@ cookieBtn.addEventListener('keydown', e => {
 function answer(v, btn, x, y){
   if (locked) return;
   if (v === Q.ans) {
-    const base = perAns(), fast = Math.round(base * qLeft / QTIME); // speed bonus: up to the same again
-    G.cookies += base + fast; G.right++;
+    const base = earnAns(), fast = qT < QUICK ? Math.round(base * QUICK_BONUS) : 0;   // small bonus for quick
+    G.cookies += base + fast; G.right++; record(true);
     streak++; wrongRow = 0;
     sRight(); btn.classList.add('right');
     floatText('+' + fmt(base), x, y);
-    if (fast > 0) { setTimeout(() => floatText('+' + fmt(fast) + ' ⚡', x, y - 40, 'fast'), 120); if (qLeft > QTIME / 2) sFast(); }
+    if (fast > 0) { setTimeout(() => floatText('+' + fmt(fast) + ' ⚡', x, y - 40, 'fast'), 120); sFast(); }
     for (let i = 0; i < 8; i++) crumb(x, y);
     if (streak % 4 === 0 && G.level < MAX_LEVEL) { G.level++; sLevel(); setTimeout(() => floatText('LEVEL ' + G.level + '!', innerWidth / 2, innerHeight / 2, 'fast'), 250); }
     if (G.right > 2) $('hint').classList.add('gone');
     lockThen(250);
   } else {
     const lose = Math.min(G.cookies, perAns());
-    G.cookies -= lose; streak = 0; wrongRow++;
+    G.cookies -= lose; streak = 0; wrongRow++; record(false);
     sNope(); btn.classList.add('wrong');
     floatText(lose > 0 ? '−' + fmt(lose) : 'Oops!', x, y, 'bad');
-    for (const b of answersEl.children) if (+b.querySelector('b').textContent === Q.ans) b.classList.add('right'); // show the right one
+    // show the right answer for a good while, then another sum: you only go back to clicking after a right one
+    for (const b of answersEl.children) if (+b.querySelector('b').textContent === Q.ans) b.classList.add('right', 'show');
+    const qEl = $('question'); qEl.textContent = Q.q.replace('?', Q.ans); qEl.classList.add('reveal');
+    $('hint').textContent = `It was ${Q.ans}! Try another one…`;
     if (wrongRow >= 2 && G.level > 1) { G.level--; wrongRow = 0; }
-    lockThen(900);
+    lockThen(2200, () => { qEl.classList.remove('reveal'); $('hint').textContent = 'Take your time and click the cookie with the right answer!'; nextQuestion(); });
   }
   countEl.classList.remove('bump'); void countEl.offsetWidth; countEl.classList.add('bump');
   update(); save();
@@ -304,24 +320,17 @@ function showMute(){ muteBtn.textContent = G.muted ? '🔇' : '🔊'; }
 muteBtn.addEventListener('click', () => { G.muted = !G.muted; showMute(); save(); });
 $('reset').addEventListener('click', () => {
   if (!confirm('Start again from 0 cookies?')) return;
-  G = {cookies:0, n:{}, right:0, muted:G.muted, won:false, level:1}; streak = 0; save();
+  G = Object.assign(fresh(), {muted:G.muted}); streak = 0; save();
   $('hint').classList.remove('gone'); $('hint').textContent = 'Click the big cookie!'; update(); startClicking();
 });
 
-// ---------- every frame: the question timer ----------
+// ---------- every frame: the quick bonus bar (no time limit) ----------
 let last = performance.now(), uiT = 0, saveT = 0;
 function loop(now){
   const dt = Math.min(1, (now - last) / 1000); last = now;
-  if (!locked && Q) {
-    qLeft -= dt;
-    if (qLeft <= 0) { // too slow: no penalty, but the streak ends and the right answer is shown
-      qLeft = 0; streak = 0;
-      for (const b of answersEl.children) if (+b.querySelector('b').textContent === Q.ans) b.classList.add('right');
-      tone(300, 0, .15, 'triangle', .05, 200);
-      lockThen(800);
-    }
-  }
-  const bar = $('timeBar'); bar.style.transform = `scaleX(${qLeft / QTIME})`; bar.classList.toggle('slow', qLeft < QTIME / 2);
+  if (!locked && Q) qT += dt;
+  const k = Math.max(0, 1 - qT / QUICK);
+  $('timeBar').style.transform = `scaleX(${k})`; $('timer').classList.toggle('over', k <= 0);
   uiT += dt; saveT += dt;
   if (uiT > .1) { uiT = 0; update(); }
   if (saveT > 2) { saveT = 0; save(); }
@@ -332,7 +341,7 @@ addEventListener('pagehide', save);
 
 // ?shot=N gives N cookies and a few items (for screenshots)
 const shot = new URLSearchParams(location.search).get('shot');
-if (shot) { G = {cookies:+shot || 0, n:{pencil:3, fingers:8, chips:4, ruler:1}, right:20, muted:true, won:false, level:3}; streak = 5; $('hint').classList.add('gone'); }
+if (shot) { G = Object.assign(fresh(), {cookies:+shot || 0, n:{pencil:3, fingers:8, chips:4, ruler:1}, right:20, asked:24, last:[1,1,0,1,1,1,1,0,1,1], muted:true, level:3}); streak = 5; $('hint').classList.add('gone'); }
 
 showMute();
 renderShop();

@@ -133,8 +133,11 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
 
 - **Two modes**: clicking (`startClicking`, big `#cookie`, `perClick()` = perAns/10, `CLICKS_PER_Q` clicks) then
   quiz (`body.quizMode`). After any answer or timeout it goes back to clicking. `?quiz` starts in quiz mode.
-- **Quiz**: `makeQuestion(level)` builds a sum and 3 options (wrong ones are near misses). Right = `perAns()` plus a
-  speed bonus scaled by time left (`QTIMES` per level); wrong = lose `perAns()`; timeout = streak lost, no penalty.
+- **Quiz**: `makeQuestion(level)` builds a sum and 3 options (wrong ones are near misses). **No time limit** (since v8:
+  Mum and Dad want him to get it right, not guess fast). Right = `earnAns()` plus +25% if within `QUICK` seconds, then back
+  to clicking; wrong = lose `perAns()`, the sum shows its answer in green for 2s, then another sum, until one is right.
+- **Accuracy**: `G.last` holds the last `ACC_N` = 10 answers; `accMult()` (×2 at 100%, ×1 at 80%, ×0.15 when guessing)
+  multiplies every right answer and click (`earnAns`, `perClick`), shown top right (`#acc`). `G.asked` counts all answers.
   `G.level` (1–6) goes up after 4 right in a row, down after 2 wrong in a row. Keys 1/2/3 also answer.
 - `ITEMS` is the shop: base `cost`, adds `pa` per right answer. Bought many times; `price()` grows by `PRICE_UP`
   (15%) per one owned. **Harry's rules: everything is plus, never times, and cookies only come from clicking and
