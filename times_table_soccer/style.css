@@ -65,7 +65,10 @@ body.play #quitBtn { display: block; }
 #qOpts button.right { background: var(--green); color: #fff; }
 #qOpts button.wrong { background: var(--red); color: #fff; }
 #qBar { height: 1.2cqw; margin-top: 1.1cqw; background: #ddd; border: .25cqw solid var(--ink); border-radius: 99px; overflow: hidden; }
-#qBar i { display: block; height: 100%; width: 100%; background: var(--green); }
+#qBar i { display: block; height: 100%; width: 100%; background: #8ce99a; transition: width .1s linear; }
+#qBar.over { background: none; border-color: transparent; height: auto; }
+#qBar.over i { display: none; }
+#qBar.over::after { content: 'Take your time – get it right! 🧠'; font-size: 1.7cqw; font-weight: 800; color: #6b6585; }
 
 #toast { position: absolute; left: 50%; top: 9cqw; transform: translateX(-50%); z-index: 6; pointer-events: none; opacity: 0; transition: opacity .3s;
   font-family: Bangers, Impact, sans-serif; font-size: 3cqw; letter-spacing: .1cqw; background: var(--yellow); color: var(--ink);

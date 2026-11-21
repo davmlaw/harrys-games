@@ -192,8 +192,9 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
   passes / shoots; `keeperAI` guards the line. Teammates like passing to you, and PASS without the ball shouts for it (`G.call`).
 - **Duels are the maths** (`startDuel(type, me, other)`, `answer(i)`): `dribble` (they touch you while you have the ball),
   `tackle` (you touch their player with the ball), `shoot` (you press shoot) and `save` (they shoot while you are the goalie).
-  Time slows to `CFG.SLOW` (`G.ts`) for `CFG.QTIME` = 5 seconds. Right = win it (quick right answer on a shot = SUPER SHOT);
-  wrong or too slow = lose it. Computer v computer contacts are a dice roll (`D.tk`) in `contacts()`.
+  **No time limit** (since v3: Harry was guessing under time pressure). Time slows to `CFG.SLOW` (`G.ts`) for the `CFG.BONUS` = 3
+  second quick-bonus window, then stops until he answers. Right = win it; right within the bonus = SUPER SHOT, or a bigger
+  boost/knock for dribbles and tackles. Wrong = lose it, so guessing never pays. The top bar shows % right this match (`G.stats`). Computer v computer contacts are a dice roll (`D.tk`) in `contacts()`.
 - **Ball**: `G.ball.owner` dribbles it; free balls slow with `CFG.DRAG` and bounce off the edges (no throw-ins or corners).
   A shot is `hot`: it flies past everyone except goalies. Goals only count from a free ball crossing the line in the goal mouth.
 - **Match**: `CFG.MATCH` seconds (the clock stops during questions), a draw goes to golden goal. `DIFF` tunes the other team,
@@ -202,7 +203,7 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
   (`localStorage` `timesTableSoccer1`). A brand-new player starts from their Brick Racers tables if there are any.
 - The title screen runs an AI v AI demo (`newMatch(null)`). Mobile copies Park Dodgeball (one floating stick + SHOOT/PASS buttons).
 - **Testing**: `?auto` plays itself over and over (logs goals and results to the console), `&right=75` (percent of answers it
-  gets right), `&pos=gk|def|mid|str`, `&diff=hard`, `&tables=6`, `&hold` (freeze on the first question, for screenshots),
+  gets right), `&pos=gk|def|mid|str`, `&diff=hard`, `&tables=6`, `&hold` (freeze on the first question, for screenshots; `&hold=5` freezes 5 seconds in, after the bonus),
   `&mobile`. Bump `?v=N` each release.
 
 ### food_wars2 (`index.html`)

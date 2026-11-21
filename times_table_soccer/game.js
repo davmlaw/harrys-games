@@ -36,8 +36,8 @@ const CFG = {
   BR: 6,             // ball size (radius)
   SPEED: 150,        // running speed
   MATCH: 180,        // seconds in a match
-  QTIME: 5,          // seconds to answer a question
-  SLOW: .08,         // how slow time goes during a question (1 = normal)
+  BONUS: 3,          // answer right within this many seconds for a quick bonus (there's no time limit)
+  SLOW: .08,         // how slow time goes during the bonus time (1 = normal); after it, time stops until you answer
   SHOT: 600,         // your shot speed after a right answer
   SUPER: 780,        // ...after a really quick right answer
   WEAK: 300,         // ...after a wrong answer
@@ -268,19 +268,24 @@ function humanShot(p, right, quick) {
 const DUEL_TITLE = { dribble: 'DRIBBLE PAST!', tackle: 'TACKLE!', shoot: 'SHOOT!', save: 'SAVE IT!' };
 function startDuel(type, me, other) {
   const q = nextFact();
-  G.duel = { type, me, other, q, t: CFG.QTIME, slow: type === 'save' ? .05 : CFG.SLOW, done: false, after: 0, auto: rand(2.4, 4.4) };
+  G.duel = { type, me, other, q, t: 0, slow: type === 'save' ? .05 : CFG.SLOW, done: false, after: 0, auto: rand(.6, 4) };   // t = seconds so far
   $('qTitle').textContent = DUEL_TITLE[type];
   $('qText').textContent = `${q.a} × ${q.b}`;
   [...$('qOpts').children].forEach((b, i) => { b.textContent = q.opts[i]; b.className = ''; });
-  $('qBar').firstElementChild.style.width = '100%';
+  setBar(0);
   $('quiz').classList.toggle('top', me.y > CY + 10);   // keep the question out of the way of the action
   $('quiz').classList.add('on');
   SFX.slow();
 }
+function setBar(t) {   // the bar shows the bonus time running out, then says take your time
+  const bar = $('qBar'), k = clamp(1 - t / CFG.BONUS, 0, 1);
+  bar.firstElementChild.style.width = k * 100 + '%';
+  bar.classList.toggle('over', k <= 0);
+}
 function endDuel() { G.duel = null; $('quiz').classList.remove('on'); }
 function answer(i) {   // i = which button (-1 = too slow)
   const d = G.duel; if (!d || d.done) return;
-  const right = i >= 0 && d.q.opts[i] === d.q.ans, quick = d.t > CFG.QTIME - 2.2;
+  const right = i >= 0 && d.q.opts[i] === d.q.ans, quick = right && d.t < CFG.BONUS;
   d.done = true; d.after = right ? .2 : 1;
   answerFact(d.q.k, right);
   G.stats.asked++; if (right) G.stats.right++;
@@ -289,12 +294,13 @@ function answer(i) {   // i = which button (-1 = too slow)
   $('qText').textContent = `${d.q.a} × ${d.q.b} = ${d.q.ans}`;
   right ? SFX.right() : SFX.wrong();
   const me = d.me, o = d.other, b = G.ball;
-  if (!right) say(me.x, me.y - 26, i < 0 ? 'Too slow!' : 'Oops!', '#ffb3a6');
+  if (!right) say(me.x, me.y - 26, 'Oops!', '#ffb3a6');
+  if (quick && d.type !== 'shoot') say(me.x, me.y - 50, '⚡ QUICK BONUS!', '#8ce99a');
   if (d.type === 'dribble' && b.owner === me) {
-    if (right) { knock(o, me, 2); me.safe = 1.5; me.boost = 1.3; say(me.x, me.y - 26, pick(['Skill!', 'Nutmeg!', 'Too quick!', 'See ya!']), '#ffd43b'); }
+    if (right) { knock(o, me, quick ? 2.6 : 2); me.safe = 1.5; me.boost = quick ? 2.2 : 1.3; say(me.x, me.y - 26, pick(['Skill!', 'Nutmeg!', 'Too quick!', 'See ya!']), '#ffd43b'); }
     else { take(o); o.safe = 1; knock(me, o, 1.1); }
   } else if (d.type === 'tackle' && b.owner === o) {
-    if (right) { take(me); me.safe = 1.2; me.boost = .8; knock(o, me, 1.4); say(me.x, me.y - 26, 'Great tackle!', '#ffd43b'); }
+    if (right) { take(me); me.safe = 1.2; me.boost = quick ? 1.8 : .8; knock(o, me, quick ? 2.2 : 1.4); say(me.x, me.y - 26, 'Great tackle!', '#ffd43b'); }
     else { knock(me, o, 1.1); o.safe = 1.6; o.boost = .8; }
   } else if (d.type === 'shoot' && b.owner === me) {
     humanShot(me, right, quick);
@@ -312,12 +318,10 @@ function updateDuel(rdt) {
   const d = G.duel;
   if (d.done) { d.after -= rdt; if (d.after <= 0) endDuel(); return; }
   if (d.type === 'save' && !G.ball.hot) { endDuel(); return; }   // the shot is over already
-  if (Q.has('hold')) { if (d.t > 3.2) d.t -= rdt; return; }   // testing: freeze on the first question (for screenshots)
-  d.t -= rdt;
-  $('qBar').firstElementChild.style.width = clamp(d.t / CFG.QTIME * 100, 0, 100) + '%';
-  $('qBar').firstElementChild.style.background = d.t < 1.5 ? '#ff5a36' : d.t < 3 ? '#ffd43b' : '#58b947';
-  if (AUTO && d.t < d.auto) { const r = d.q.opts.indexOf(d.q.ans); answer(Math.random() < AUTO_RIGHT ? r : (r + 1) % 3); }
-  else if (d.t <= 0) answer(-1);
+  if (Q.has('hold')) { if (d.t < (+Q.get('hold') || 1.8)) d.t += rdt; setBar(d.t); return; }   // testing: freeze on the first question (&hold=4: 4 seconds in)
+  d.t += rdt;
+  setBar(d.t);
+  if (AUTO && d.t > d.auto) { const r = d.q.opts.indexOf(d.q.ans); answer(Math.random() < AUTO_RIGHT ? r : (r + 1) % 3); }
 }
 function contacts() {   // someone from the other team touches the player with the ball
   const b = G.ball, c = b.owner;
@@ -483,7 +487,7 @@ function control(p) {
 
 // ---------- one tick of the game ----------
 function step(rdt) {
-  G.ts = lerp(G.ts, G.duel && !G.duel.done ? G.duel.slow : G.duel ? .35 : 1, 1 - Math.exp(-rdt * 14));
+  G.ts = lerp(G.ts, G.duel && !G.duel.done ? (G.duel.t < CFG.BONUS ? G.duel.slow : 0) : G.duel ? .35 : 1, 1 - Math.exp(-rdt * 14));
   const dt = rdt * G.ts, b = G.ball;
   for (const f of G.fx) f.t += rdt;
   G.fx = G.fx.filter(f => f.t < (f.big ? 1.8 : 1.1));
@@ -693,6 +697,12 @@ function drawScore() {
   box(CX - 178, 132, TEAMS[0].shirt); box(CX + 46, 132, TEAMS[1].shirt); box(CX - 50, 100, '#fff');
   txt(TEAMS[0].name, CX - 166, y + 1, 24, '#fff', 'left', INK, 3); txt(G.score[0], CX - 64, y + 1, 28, '#fff', 'right', INK, 3);
   txt(TEAMS[1].name, CX + 166, y + 1, 24, '#fff', 'right', INK, 3); txt(G.score[1], CX + 64, y + 1, 28, '#fff', 'left', INK, 3);
+  const s = G.stats;
+  if (G.human) {   // how many maths answers you've got right this match
+    const pc = s.asked ? Math.round(s.right / s.asked * 100) : 0, col = !s.asked ? '#fff' : pc >= 80 ? '#8ce99a' : pc >= 50 ? '#ffd43b' : '#ffb3a6';
+    ctx.fillStyle = 'rgba(29,26,51,.75)'; ctx.beginPath(); ctx.roundRect(CX - 92, y + 22, 184, 26, 8); ctx.fill();
+    txt(s.asked ? `🧠 ${pc}% right (${s.right}/${s.asked})` : '🧠 0 questions yet', CX, y + 36, 17, col, 'center', INK, 0);
+  }
   txt(G.golden ? 'GOLDEN' : `${mm}:${ss}`, CX, y + 1, G.golden ? 21 : 26, G.t < 20 && !G.golden ? '#ff5a36' : INK, 'center', INK, 0);
 }
 function drawStick(s, hx, hy, label) {
@@ -723,10 +733,10 @@ function draw() {
     const g = ctx.createRadialGradient(fx, fy, 30, fx, fy, 150);
     g.addColorStop(0, 'rgba(15,12,40,0)'); g.addColorStop(1, `rgba(15,12,40,${a})`);
     ctx.fillStyle = g; ctx.fillRect(-20, -20, W + 40, H + 40);
-    if (!d.done) {   // the 5 second ring
-      ctx.strokeStyle = d.t < 1.5 ? '#ff5a36' : '#ffd43b'; ctx.lineWidth = 5; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.arc(d.me.x, d.me.y, 26, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(d.t / CFG.QTIME, 0, 1)); ctx.stroke(); ctx.lineCap = 'butt';
-      txt(Math.ceil(d.t), d.me.x + 34, d.me.y - 24, 22, '#fff');
+    if (!d.done && d.t < CFG.BONUS) {   // the quick bonus ring (no time limit after it runs out)
+      ctx.strokeStyle = '#8ce99a'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(d.me.x, d.me.y, 26, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(1 - d.t / CFG.BONUS, 0, 1)); ctx.stroke(); ctx.lineCap = 'butt';
+      txt('⚡', d.me.x + 34, d.me.y - 24, 20, '#fff');
     }
   }
   for (const f of G.fx) {
