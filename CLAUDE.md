@@ -192,8 +192,8 @@ There is no lint, build, or test tooling. Verify changes by loading the page and
   passes / shoots; `keeperAI` guards the line. Teammates like passing to you, and PASS without the ball shouts for it (`G.call`).
 - **Duels are the maths** (`startDuel(type, me, other)`, `answer(i)`): `dribble` (they touch you while you have the ball),
   `tackle` (you touch their player with the ball), `shoot` (you press shoot) and `save` (they shoot while you are the goalie).
-  **No time limit** (since v3: Harry was guessing under time pressure). Time slows to `CFG.SLOW` (`G.ts`) for the `CFG.BONUS` = 3
-  second quick-bonus window, then stops until he answers. Right = win it; right within the bonus = SUPER SHOT, or a bigger
+  **No time limit** (since v3: Harry was guessing under time pressure). The game pauses completely (`G.ts` = 0) while a question
+  is on screen; the `CFG.BONUS` = 3 second quick-bonus window still counts down. Right = win it; right within the bonus = SUPER SHOT, or a bigger
   boost/knock for dribbles and tackles. Wrong = lose it, so guessing never pays. The top bar shows % right this match (`G.stats`). Computer v computer contacts are a dice roll (`D.tk`) in `contacts()`.
 - **Ball**: `G.ball.owner` dribbles it; free balls slow with `CFG.DRAG` and bounce off the edges (no throw-ins or corners).
   A shot is `hot`: it flies past everyone except goalies. Goals only count from a free ball crossing the line in the goal mouth.

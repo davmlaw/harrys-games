@@ -1,6 +1,6 @@
 'use strict';
 // Times Table Soccer — 6-a-side soccer seen from above. You are ONE player (goalie, defence, midfield or striker).
-// Whenever you bump into the other team (tackle, dribble), shoot, or have to save, time goes slow and a times table pops up.
+// Whenever you bump into the other team (tackle, dribble), shoot, or have to save, the game pauses and a times table pops up.
 // Everything is drawn procedurally; sound is Web Audio.
 
 const $ = id => document.getElementById(id);
@@ -37,7 +37,6 @@ const CFG = {
   SPEED: 150,        // running speed
   MATCH: 180,        // seconds in a match
   BONUS: 3,          // answer right within this many seconds for a quick bonus (there's no time limit)
-  SLOW: .08,         // how slow time goes during the bonus time (1 = normal); after it, time stops until you answer
   SHOT: 600,         // your shot speed after a right answer
   SUPER: 780,        // ...after a really quick right answer
   WEAK: 300,         // ...after a wrong answer
@@ -163,7 +162,7 @@ const SFX = {
 
 // ---------- game state ----------
 // G.players: all 12. G.ball.owner = the player dribbling it (or null when it is rolling free).
-// G.duel = the maths question on screen right now (or null). G.ts = how fast time is going (slow during a duel).
+// G.duel = the maths question on screen right now (or null). G.ts = how fast time is going (0 = paused for a question).
 let G = null, mode = 'title';
 function newMatch(humanRole) {
   const D = humanRole ? DIFF[M.diff] : DIFF.medium;
@@ -268,7 +267,7 @@ function humanShot(p, right, quick) {
 const DUEL_TITLE = { dribble: 'DRIBBLE PAST!', tackle: 'TACKLE!', shoot: 'SHOOT!', save: 'SAVE IT!' };
 function startDuel(type, me, other) {
   const q = nextFact();
-  G.duel = { type, me, other, q, t: 0, slow: type === 'save' ? .05 : CFG.SLOW, done: false, after: 0, auto: rand(.6, 4) };   // t = seconds so far
+  G.duel = { type, me, other, q, t: 0, done: false, after: 0, auto: rand(.6, 4) };   // t = seconds so far
   $('qTitle').textContent = DUEL_TITLE[type];
   $('qText').textContent = `${q.a} × ${q.b}`;
   [...$('qOpts').children].forEach((b, i) => { b.textContent = q.opts[i]; b.className = ''; });
@@ -487,11 +486,12 @@ function control(p) {
 
 // ---------- one tick of the game ----------
 function step(rdt) {
-  G.ts = lerp(G.ts, G.duel && !G.duel.done ? (G.duel.t < CFG.BONUS ? G.duel.slow : 0) : G.duel ? .35 : 1, 1 - Math.exp(-rdt * 14));
+  // a question on screen pauses the game completely; after it, time speeds back up
+  G.ts = G.duel && !G.duel.done ? 0 : lerp(G.ts, G.duel ? .35 : 1, 1 - Math.exp(-rdt * 14));
   const dt = rdt * G.ts, b = G.ball;
   for (const f of G.fx) f.t += rdt;
   G.fx = G.fx.filter(f => f.t < (f.big ? 1.8 : 1.1));
-  for (const q of G.parts) { q.t += rdt; q.x += q.vx * rdt; q.y += q.vy * rdt; }
+  for (const q of G.parts) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; }
   G.parts = G.parts.filter(q => q.t < q.life);
   G.shake = Math.max(0, G.shake - rdt);
   if (G.duel) updateDuel(rdt);
