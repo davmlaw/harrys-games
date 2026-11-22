@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <div id="app">
@@ -16,6 +16,7 @@
     <h1>Mega Cookie</h1>
     <div id="acc" class="acc"></div>
     <div class="tools">
+      <button id="repBtn" title="My maths report">📊</button>
       <button id="mute" title="Sound on/off">🔊</button>
       <button id="reset" title="Start again">↺</button>
     </div>
@@ -38,7 +39,7 @@
         <div class="toMaths"><div id="toMathsBar"></div><span id="toMaths">Maths challenge in 12 clicks!</span></div>
       </div>
       <div class="quiz">
-        <div class="qtop"><span id="level">Level 1</span><span id="streak"></span></div>
+        <div class="qtop"><span id="level">Level 1</span><span id="lvlUp"></span><span id="streak"></span></div>
         <div id="question">7 + 8 = ?</div>
         <div class="timer" id="timer"><div id="timeBar"></div><span>No rush – take your time! 🧠</span></div>
         <div class="answers" id="answers"></div>
@@ -81,7 +82,16 @@
   </div>
 </div>
 
-<div id="ver">v8</div>
-<script src="game.js?v=8"></script>
+<div id="report" hidden>
+  <div class="card">
+    <button id="repClose" title="Close">✕</button>
+    <h2>My Maths Report</h2>
+    <div class="tabs"><button data-t="x">× Times</button><button data-t="d">÷ Dividing</button><button data-t="p">👪 Grown-ups</button></div>
+    <div id="repBody"></div>
+  </div>
+</div>
+
+<div id="ver">v9</div>
+<script src="game.js?v=9"></script>
 </body>
 </html>
